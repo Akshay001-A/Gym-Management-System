@@ -146,20 +146,6 @@ main.java
 
 ---
 
-# 📸 Screenshots
-
-Add screenshots of your application UI in the `assets` folder.
-
-Example:
-
-```
-assets/login-page.png
-assets/admin-dashboard.png
-assets/member-dashboard.png
-```
-
----
-
 # 👨‍💻 Developers
 
 * **Akshay R**
