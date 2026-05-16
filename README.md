@@ -97,7 +97,7 @@ The application uses **MySQL Database** with **JDBC Connectivity** for:
 
 Secure login interface for gym members and administrators.
 
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/admin.jpg?raw=true" width="100%"/>
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/login.png?raw=true" width="100%"/>
 
 ---
 
@@ -145,7 +145,7 @@ Send and manage notifications for gym members.
 
 Add new members with complete registration details.
 
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/addmembers.png?raw=true" width="100%"/>
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/add.png?raw=true" width="100%"/>
 
 ---
 
