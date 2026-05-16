@@ -1,12 +1,33 @@
 package gymmanagement.util;
-import java.sql.*;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Properties;
+import java.io.FileInputStream;
 
 public class dbconnection {
-    private static final String URL = "jdbc:mysql://localhost:3306/gymdb2";
-    private static final String USER = "root";
-    private static final String PASSWORD = "Akshay07@123"; // change as needed
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+
+        try {
+
+            // Load properties file
+            Properties prop = new Properties();
+            FileInputStream fis = new FileInputStream("config.properties");
+            prop.load(fis);
+
+            // Read values
+            String url = prop.getProperty("db.url");
+            String user = prop.getProperty("db.user");
+            String password = prop.getProperty("db.password");
+
+            // Create connection
+            return DriverManager.getConnection(url, user, password);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
