@@ -1,24 +1,22 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1D4350,50:A43931,100:D38312&height=260&section=header&text=Gym%20Management%20System&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=40"/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:4facfe,50:00f2fe,100:43e97b&height=260&section=header&text=Gym%20Management%20System&fontSize=45&fontColor=ffffff&animation=fadeIn&fontAlignY=40"/>
 
 # 🏋️ Gym Management System
 
-### 💪 Java Swing Based Gym Management Desktop Application
+### 💪 Professional Java Swing Desktop Application for Gym Administration
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Java-17-blue?style=for-the-badge&logo=java"/>
-  <img src="https://img.shields.io/badge/MySQL-Database-orange?style=for-the-badge&logo=mysql"/>
+  <img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=java"/>
+  <img src="https://img.shields.io/badge/MySQL-Database-blue?style=for-the-badge&logo=mysql"/>
   <img src="https://img.shields.io/badge/JDBC-Connectivity-success?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Java_Swing-GUI-green?style=for-the-badge"/>
   <img src="https://img.shields.io/badge/Desktop_Application-DBMS_Project-red?style=for-the-badge"/>
 </p>
 
----
+<br/>
 
-### 🚀 Professional Gym Management Desktop Application with Java Swing & MySQL
-
-👤 Member Management • 💳 Payment Tracking • 📅 Schedule Management • 🔔 Notifications • 🛠 Admin Dashboard
+<img src="https://readme-typing-svg.herokuapp.com?font=Poppins&size=26&duration=3000&color=36BCF7&center=true&vCenter=true&width=900&lines=Professional+Gym+Management+Desktop+Application;Java+Swing+%2B+MySQL+%2B+JDBC;Member+Management+%7C+Payments+%7C+Schedules;Admin+Dashboard+%7C+Notifications+System"/>
 
 </div>
 
@@ -26,31 +24,31 @@
 
 # 🌟 Project Overview
 
-Gym Management System is a professional Java Swing desktop application developed to automate gym administration and daily management activities.
+Gym Management System is a modern desktop-based application developed using **Java Swing** and **MySQL** to automate gym operations and simplify member management.
 
-The system provides a graphical user interface for managing:
+The application provides an intuitive graphical interface for gym administrators and members to manage:
 
-✅ Gym Members  
+✅ Member Registrations  
 ✅ Membership Payments  
-✅ Gym Schedules  
+✅ Workout Schedules  
 ✅ Notifications  
 ✅ Member Records  
 ✅ Admin Operations  
 
-The project was developed as a Database Management System (DBMS) academic project using Java Swing for GUI and MySQL with JDBC for database connectivity.
+The system was developed as a professional **Database Management System (DBMS)** academic project with real-world desktop application architecture.
 
 ---
 
-# ✨ Main Features
+# ✨ Core Features
 
 ---
 
 # 👤 Member Features
 
-✅ Member Login System  
-✅ View Dashboard  
-✅ View Notifications  
-✅ Check Gym Schedule  
+✅ Secure Member Login  
+✅ View Personal Dashboard  
+✅ Access Workout Schedule  
+✅ Receive Notifications  
 ✅ View Membership Details  
 ✅ Payment Information Access  
 
@@ -59,35 +57,35 @@ The project was developed as a Database Management System (DBMS) academic projec
 # 🛠 Admin Features
 
 ✅ Add New Members  
-✅ Update Member Details  
-✅ Delete Members  
+✅ Update Member Information  
+✅ Delete Member Records  
 ✅ View All Members  
-✅ Manage Payments  
-✅ Gym Record Management  
-✅ Database Integration  
+✅ Manage Membership Payments  
+✅ Database Record Management  
+✅ Professional Admin Dashboard  
 
 ---
 
-# 🗄 Database Management
+# 🗄 Database Integration
 
-The application uses MySQL database integration with JDBC for:
+The application uses **MySQL Database** with **JDBC Connectivity** for:
 
 📂 Member Data Storage  
-💳 Payment Records  
-📅 Schedule Management  
-🔔 Notifications Storage  
-📊 Data Retrieval & Updates  
+💳 Payment Records Management  
+📅 Workout Schedule Storage  
+🔔 Notification Management  
+📊 Real-Time Data Retrieval  
 
 ---
 
-# 🎨 User Interface Highlights
+# 🎨 UI Highlights
 
-✨ Java Swing GUI Design  
-✨ Clean Desktop Interface  
-✨ Simple Navigation System  
-✨ Professional Dashboard Layout  
-✨ User-Friendly Forms  
-✨ Interactive Desktop Experience  
+✨ Modern Java Swing GUI  
+✨ Professional Desktop Layout  
+✨ User-Friendly Navigation  
+✨ Interactive Dashboard  
+✨ Clean Forms & Components  
+✨ Responsive Desktop Experience  
 
 ---
 
@@ -95,39 +93,79 @@ The application uses MySQL database integration with JDBC for:
 
 ---
 
-## 🏠 Login Page
+# 🏠 Login Page
 
-Secure login system for members and administrators.
+Secure login interface for gym members and administrators.
 
-<img src="YOUR_LOGIN_IMAGE_LINK" width="100%"/>
-
----
-
-## 👤 Member Dashboard
-
-Interactive member dashboard with gym details and schedules.
-
-<img src="YOUR_DASHBOARD_IMAGE_LINK" width="100%"/>
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/admin.jpg?raw=true" width="100%"/>
 
 ---
 
-## 🛠 Admin Panel
+# 👤 Member Dashboard
 
-Admin dashboard for managing members and gym operations.
+Interactive member dashboard with schedules and gym details.
 
-<img src="YOUR_ADMIN_IMAGE_LINK" width="100%"/>
-
----
-
-## 💳 Payment Management
-
-Membership payment tracking and management interface.
-
-<img src="YOUR_PAYMENT_IMAGE_LINK" width="100%"/>
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/customerdash.png?raw=true" width="100%"/>
 
 ---
 
-# 🛠 Tech Stack
+# 🛠 Admin Dashboard
+
+Professional admin panel for managing gym operations.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/admindash.png?raw=true" width="100%"/>
+
+---
+
+# 💳 Payment Management
+
+Track and manage member payments efficiently.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/payment.png?raw=true" width="100%"/>
+
+---
+
+# 📅 Schedule Management
+
+Manage workout schedules and gym timings.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/schedule.png?raw=true" width="100%"/>
+
+---
+
+# 🔔 Notification System
+
+Send and manage notifications for gym members.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/notification.png?raw=true" width="100%"/>
+
+---
+
+# ➕ Add Members
+
+Add new members with complete registration details.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/addmembers.png?raw=true" width="100%"/>
+
+---
+
+# ✏️ Update Members
+
+Modify and update member records easily.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/update.png?raw=true" width="100%"/>
+
+---
+
+# ❌ Delete Members
+
+Securely remove member records from the system.
+
+<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/delete.png?raw=true" width="100%"/>
+
+---
+
+# 🛠 Technology Stack
 
 <div align="center">
 
@@ -136,58 +174,11 @@ Membership payment tracking and management interface.
 | Programming Language | Java |
 | GUI Framework | Java Swing |
 | Database | MySQL |
-| Database Connectivity | JDBC |
-| Development IDE | Eclipse IDE |
+| Connectivity | JDBC |
+| IDE | Eclipse IDE |
 | Version Control | Git & GitHub |
 
 </div>
-
----
-
-# ⚙️ Core Functionalities
-
----
-
-# 🔐 Authentication System
-
-The system provides:
-
-✅ Member Login Authentication  
-✅ Admin Access Control  
-✅ Secure Database Validation  
-
----
-
-# 👤 Member Management System
-
-Admin can:
-
-✅ Add Members  
-✅ Update Details  
-✅ Delete Records  
-✅ View Member List  
-✅ Track Membership Status  
-
----
-
-# 💳 Payment Management
-
-The application supports:
-
-📊 Membership Payment Tracking  
-📅 Payment Records  
-💰 Fee Management  
-📋 Payment History  
-
----
-
-# 📅 Schedule Management
-
-Members can:
-
-✅ View Gym Timings  
-✅ Check Workout Schedule  
-✅ Receive Notifications  
 
 ---
 
@@ -198,14 +189,14 @@ Gym_management_System/
 │
 ├── src/
 │   └── gymmanagement/
-│       ├── model/        # Data models
-│       ├── ui/           # User interface pages
-│       ├── util/         # Database connection utilities
-│       └── main.java     # Application entry point
+│       ├── model/          # Data Models
+│       ├── ui/             # User Interface Pages
+│       ├── util/           # Database Utilities
+│       └── main.java       # Application Entry Point
 │
-├── assets/               # Images and icons
+├── assets/                 # Images & Icons
 │
-├── database.sql          # Database setup script
+├── database.sql            # Database Script
 │
 ├── README.md
 └── LICENSE
@@ -213,13 +204,11 @@ Gym_management_System/
 
 ---
 
-# 🗄 Database Setup
+# ⚙️ Database Setup
 
 ---
 
-# ▶️ Start MySQL Server
-
-Open MySQL shell and connect:
+# ▶️ Connect MySQL
 
 ```sql
 \sql
@@ -236,7 +225,7 @@ SHOW DATABASES;
 
 ---
 
-# 📂 Select Project Database
+# 📂 Select Database
 
 ```sql
 USE gym_management;
@@ -274,7 +263,7 @@ git clone https://github.com/Akshay001-A/Gym-Management-System.git
 
 # 📂 Open Project
 
-Open the project using:
+Open the project in:
 
 ```text
 Eclipse IDE
@@ -282,9 +271,9 @@ Eclipse IDE
 
 ---
 
-# ▶️ Configure Database
+# ⚙️ Configure Database
 
-Update database credentials inside:
+Update your database credentials inside:
 
 ```text
 src/gymmanagement/util/dbconnection.java
@@ -307,11 +296,11 @@ to start the desktop application.
 # 🌟 Application Workflow
 
 1️⃣ Admin Login  
-2️⃣ Add Members  
-3️⃣ Manage Payments  
-4️⃣ Update Member Details  
+2️⃣ Add Gym Members  
+3️⃣ Manage Membership Payments  
+4️⃣ Update Member Information  
 5️⃣ Track Gym Activities  
-6️⃣ View Notifications & Schedules  
+6️⃣ Manage Notifications & Schedules  
 
 ---
 
@@ -320,7 +309,7 @@ to start the desktop application.
 ☁ Cloud Database Integration  
 📱 Mobile Application Version  
 📊 Advanced Analytics Dashboard  
-💳 Online Payment Integration  
+💳 Online Payment Gateway  
 📈 Membership Reports  
 🔔 Email & SMS Notifications  
 🧠 AI-Based Fitness Recommendations  
@@ -333,7 +322,7 @@ to start the desktop application.
 
 # Akshay R 🚀
 
-### Full Stack & Java Developer
+### Full Stack Developer | Java Developer | AI Enthusiast
 
 <p align="center">
   <a href="https://github.com/Akshay001-A">
@@ -363,16 +352,14 @@ to start the desktop application.
 
 This project is licensed under the **MIT License**.
 
-See the LICENSE file for more information.
+See the LICENSE file for more details.
 
 ---
 
 <div align="center">
 
-# ⭐ Thanks for Visiting This Project ⭐
+# ⭐ If You Like This Project, Give It a Star ⭐
 
-### 💪 Professional Gym Management System Built with Java Swing & MySQL
-
-<img src="https://readme-typing-svg.herokuapp.com?font=Poppins&size=24&duration=3000&color=FF9933&center=true&vCenter=true&width=850&lines=Java+Swing+Based+Gym+Management+System;MySQL+%2B+JDBC+Desktop+Application;Professional+DBMS+Project+for+Gym+Management"/>
+<img src="https://readme-typing-svg.herokuapp.com?font=Poppins&size=24&duration=3000&color=00F7FF&center=true&vCenter=true&width=850&lines=Professional+Gym+Management+Desktop+Application;Built+Using+Java+Swing+%26+MySQL;DBMS+Project+with+Modern+GUI+Design"/>
 
 </div>
