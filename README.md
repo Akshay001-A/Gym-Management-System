@@ -93,14 +93,6 @@ The application uses **MySQL Database** with **JDBC Connectivity** for:
 
 ---
 
-# 🏠 Login Page
-
-Secure login interface for gym members and administrators.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/login.png?raw=true" width="100%"/>
-
----
-
 # 👤 Member Dashboard
 
 Interactive member dashboard with schedules and gym details.
@@ -114,54 +106,6 @@ Interactive member dashboard with schedules and gym details.
 Professional admin panel for managing gym operations.
 
 <img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/admindash.png?raw=true" width="100%"/>
-
----
-
-# 💳 Payment Management
-
-Track and manage member payments efficiently.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/payment.png?raw=true" width="100%"/>
-
----
-
-# 📅 Schedule Management
-
-Manage workout schedules and gym timings.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/schedule.png?raw=true" width="100%"/>
-
----
-
-# 🔔 Notification System
-
-Send and manage notifications for gym members.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/notification.png?raw=true" width="100%"/>
-
----
-
-# ➕ Add Members
-
-Add new members with complete registration details.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/add.png?raw=true" width="100%"/>
-
----
-
-# ✏️ Update Members
-
-Modify and update member records easily.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/update.png?raw=true" width="100%"/>
-
----
-
-# ❌ Delete Members
-
-Securely remove member records from the system.
-
-<img src="https://github.com/Akshay001-A/Gym-Management-System/blob/main/assets/delete.png?raw=true" width="100%"/>
 
 ---
 
