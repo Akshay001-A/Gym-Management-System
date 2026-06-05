@@ -12,17 +12,22 @@ public class dbconnection {
 
         try {
 
-            // Load properties file
+            System.out.println("Looking for config file at:");
+            System.out.println(new java.io.File("config.properties").getAbsolutePath());
+
             Properties prop = new Properties();
             FileInputStream fis = new FileInputStream("config.properties");
             prop.load(fis);
 
-            // Read values
             String url = prop.getProperty("db.url");
             String user = prop.getProperty("db.user");
             String password = prop.getProperty("db.password");
 
-            // Create connection
+            // Load MySQL Driver
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            System.out.println("MySQL Driver Loaded Successfully");
+
             return DriverManager.getConnection(url, user, password);
 
         } catch (Exception e) {

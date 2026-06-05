@@ -16,15 +16,6 @@
     <orderEntry type="jdk" jdkName="JavaSE-21" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
-      <library name="mysql-connector-j-9.3.0.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../../mysql-connector-j-9.3.0/mysql-connector-j-9.3.0/mysql-connector-j-9.3.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
       <library name="flatlaf-3.6.jar">
         <CLASSES>
           <root url="jar://C:/Users/flatlaf-3.6.jar!/" />
@@ -33,5 +24,7 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="mysql-connector-j-9.7.0" level="project" />
+    <orderEntry type="library" name="flatlaf-3.6" level="project" />
   </component>
 </module>
