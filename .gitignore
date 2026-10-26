@@ -1,1 +1,38 @@
+
+# Existing Java Swing project — preserve this rule
 config.properties
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Java and Maven build output
+**/target/
+**/build/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Local application configuration
+**/application-local.yml
+**/application-local.yaml
+
+# Logs and temporary files
+*.log
+logs/
+*.tmp
+*.bak
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+
+
+# Generated build output
+microservices/member-service/target/
+
+# IntelliJ files in the original project root
+/.idea/
