@@ -1,0 +1,26 @@
+
+spring:
+  application:
+    name: trainer-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gym_trainer_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8084
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
