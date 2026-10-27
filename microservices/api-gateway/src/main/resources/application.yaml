@@ -3,6 +3,12 @@ spring:
   application:
     name: api-gateway
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret-key: ${JWT_SECRET}
+
   cloud:
     gateway:
       server:
@@ -22,7 +28,6 @@ spring:
               uri: http://localhost:8084
               predicates:
                 - Path=/api/trainers/**
-
 
 server:
   port: 8083

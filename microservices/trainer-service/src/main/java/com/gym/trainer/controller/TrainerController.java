@@ -6,6 +6,7 @@ import com.gym.trainer.service.TrainerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,25 +21,34 @@ public class TrainerController {
         this.trainerService = trainerService;
     }
 
+    // Only ADMIN can create trainers
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Trainer> createTrainer(
             @Valid @RequestBody Trainer trainer) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(trainerService.createTrainer(trainer));
     }
 
+    // ADMIN and MEMBER can view the trainer list
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MEMBER')")
     public ResponseEntity<List<Trainer>> getAllTrainers() {
         return ResponseEntity.ok(trainerService.getAllTrainers());
     }
 
+    // ADMIN and MEMBER can view trainer details
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MEMBER')")
     public ResponseEntity<Trainer> getTrainerById(
             @PathVariable Long id) {
-        return ResponseEntity.ok(trainerService.getTrainerById(id));
+        return ResponseEntity.ok(
+                trainerService.getTrainerById(id));
     }
 
+    // Only ADMIN can update trainer details
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Trainer> updateTrainer(
             @PathVariable Long id,
             @Valid @RequestBody Trainer trainer) {
@@ -46,15 +56,18 @@ public class TrainerController {
                 trainerService.updateTrainer(id, trainer));
     }
 
+    // Only ADMIN can delete trainers
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteTrainer(
             @PathVariable Long id) {
         trainerService.deleteTrainer(id);
         return ResponseEntity.noContent().build();
     }
 
-
+    // ADMIN and MEMBER can search trainers
     @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MEMBER')")
     public ResponseEntity<List<Trainer>> searchBySpecialization(
             @RequestParam String specialization) {
         return ResponseEntity.ok(
@@ -62,6 +75,7 @@ public class TrainerController {
     }
 
     @GetMapping("/availability/{availability}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MEMBER')")
     public ResponseEntity<List<Trainer>> getByAvailability(
             @PathVariable String availability) {
         return ResponseEntity.ok(
@@ -69,10 +83,10 @@ public class TrainerController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MEMBER')")
     public ResponseEntity<List<Trainer>> getByStatus(
             @PathVariable String status) {
         return ResponseEntity.ok(
                 trainerService.getTrainersByStatus(status));
     }
-
 }

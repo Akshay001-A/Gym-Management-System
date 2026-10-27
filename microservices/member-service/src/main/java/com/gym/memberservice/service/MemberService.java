@@ -4,6 +4,7 @@ package com.gym.memberservice.service;
 import com.gym.memberservice.entity.Member;
 import com.gym.memberservice.exception.MemberNotFoundException;
 import com.gym.memberservice.repository.MemberRepository;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,16 @@ public class MemberService {
         return memberRepository.save(member);
     }
 
+    // Get the logged-in member's profile using JWT email
+    public Member getMemberByEmail(String email) {
+
+        return memberRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() ->
+                        new MemberNotFoundException(
+                                "Member profile not found for email: " + email
+                        ));
+    }
+
     // Get members with pagination
     public Page<Member> getAllMembers(Pageable pageable) {
         return memberRepository.findAll(pageable);
@@ -60,32 +71,32 @@ public class MemberService {
                                 "Member not found with ID: " + id
                         ));
 
-        // Check whether another member uses this email
         boolean emailUsedByAnotherMember =
                 updatedMember.getEmail() != null
-                        && memberRepository.existsByEmail(updatedMember.getEmail())
+                        && memberRepository.existsByEmail(
+                        updatedMember.getEmail())
                         && (existingMember.getEmail() == null
                         || !existingMember.getEmail().equalsIgnoreCase(
-                        updatedMember.getEmail()
-                ));
+                        updatedMember.getEmail()));
 
         if (emailUsedByAnotherMember) {
             throw new IllegalArgumentException(
-                    "Email already registered: " + updatedMember.getEmail()
+                    "Email already registered: "
+                            + updatedMember.getEmail()
             );
         }
 
-        // Check whether another member uses this mobile number
         boolean mobileUsedByAnotherMember =
                 updatedMember.getMobile() != null
-                        && memberRepository.existsByMobile(updatedMember.getMobile())
+                        && memberRepository.existsByMobile(
+                        updatedMember.getMobile())
                         && !updatedMember.getMobile().equals(
-                        existingMember.getMobile()
-                );
+                        existingMember.getMobile());
 
         if (mobileUsedByAnotherMember) {
             throw new IllegalArgumentException(
-                    "Mobile number already registered: " + updatedMember.getMobile()
+                    "Mobile number already registered: "
+                            + updatedMember.getMobile()
             );
         }
 
