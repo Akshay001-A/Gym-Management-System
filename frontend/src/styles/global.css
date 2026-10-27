@@ -1,0 +1,120 @@
+/* =====================================================
+   FORM & FIT CLUB — MANAGEMENT DASHBOARD
+   Clean, responsive, professional design
+   ===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #19382c;
+  background: #f2f6f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --primary: #1f704f;
+  --primary-dark: #164b36;
+  --primary-light: #e3f0e7;
+  --primary-pale: #f0f7f1;
+  --green: #247951;
+  --green-dark: #164b36;
+  --green-light: #e5f1e8;
+  --green-pale: #f1f7f2;
+  --green: #247951;
+  --green-dark: #164b36;
+  --green-light: #e5f1e8;
+  --green-pale: #f1f7f2;
+  --accent: #a8dadc;
+  --accent-dark: #89c2c9;
+  --accent-light: #d9f0f2;
+  --accent-pale: #f0f9f9;
+  --bg: #f2f6f2;
+  --text: #19382c;
+  --muted: #718278;
+  --border: #dfe9e1;
+  --white: #ffffff;
+  --radius: 15px;
+  --shadow: 0 5px 18px rgba(24, 61, 42, 0.045);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 90% 0%, rgba(218, 237, 222, 0.34), transparent 34rem),
+    #f2f6f2;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: 'DM Sans', sans-serif;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(36, 102, 77, 0.25);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Manrope', sans-serif;
+  color: #19382c;
+}
+
+::selection {
+  color: #123b2a;
+  background: #cce7d2;
+}

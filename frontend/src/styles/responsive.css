@@ -1,0 +1,331 @@
+
+/* RESPONSIVE: SMALL DESKTOPS */
+
+@media (min-width: 1600px) {
+  .page-content {
+    padding-right: 45px;
+    padding-left: 45px;
+  }
+
+  .topbar {
+    padding-right: 45px;
+    padding-left: 45px;
+  }
+
+  .metrics-grid {
+    gap: 19px;
+  }
+
+  .metric-card {
+    padding: 23px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sidebar {
+    width: 225px;
+  }
+
+  .main-layout {
+    width: calc(100% - 225px);
+    margin-left: 225px;
+  }
+
+  .page-content {
+    padding: 27px 24px;
+  }
+
+  .topbar {
+    padding: 0 24px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric-card {
+    min-height: 140px;
+  }
+}
+
+/* RESPONSIVE: TABLETS */
+
+@media (max-width: 800px) {
+  .sidebar {
+    width: 76px;
+    padding: 23px 10px;
+  }
+
+  .main-layout {
+    width: calc(100% - 76px);
+    margin-left: 76px;
+  }
+
+  .brand {
+    justify-content: center;
+    margin: 0 0 30px;
+  }
+
+  .brand-logo {
+    width: 43px;
+    height: 43px;
+  }
+
+  .brand > div:last-child,
+  .club-info,
+  .club-selector > svg,
+  .sidebar-section-label,
+  .sidebar-link > span:not(.nav-count),
+  .sidebar-promo {
+    display: none;
+  }
+
+  .club-selector {
+    justify-content: center;
+    padding: 10px 5px;
+    margin-bottom: 25px;
+  }
+
+  .sidebar-nav {
+    gap: 9px;
+  }
+
+  .sidebar-link,
+  .nav-link {
+    justify-content: center;
+    min-height: 45px;
+    padding: 0;
+  }
+
+  .nav-count {
+    position: absolute;
+    margin: -28px 0 0 29px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
+
+  .sidebar-bottom {
+    padding-top: 20px;
+  }
+
+  .page-content {
+    padding: 25px 20px;
+  }
+
+  .topbar {
+    min-height: 64px;
+    padding: 0 20px;
+  }
+}
+
+/* RESPONSIVE: MOBILE */
+
+@media (max-width: 520px) {
+  .sidebar {
+    width: 59px;
+    padding: 17px 6px;
+  }
+
+  .main-layout {
+    width: calc(100% - 59px);
+    margin-left: 59px;
+  }
+
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .page-content {
+    padding: 20px 13px;
+  }
+
+  .topbar {
+    min-height: 60px;
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .breadcrumb {
+    gap: 5px;
+    font-size: 10px;
+  }
+
+  .topbar-actions {
+    gap: 7px;
+  }
+
+  .topbar-date {
+    display: none;
+  }
+
+  .icon-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .page-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 17px;
+    margin-bottom: 22px;
+  }
+
+  .page-title-row h1 {
+    font-size: 25px;
+  }
+
+  .page-subtitle {
+    font-size: 12px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric-card {
+    min-height: 135px;
+    padding: 14px 12px;
+  }
+
+  .metric-top {
+    gap: 5px;
+    font-size: 10px;
+  }
+
+  .metric-top svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .metric-value {
+    margin: 15px 0 10px;
+    font-size: 26px;
+  }
+
+  .metric-note {
+    align-items: flex-start;
+    font-size: 9px;
+  }
+
+  .surface,
+  .members-panel,
+  .activity-panel,
+  .content-card {
+    padding: 15px 12px;
+  }
+
+  .dashboard-grid {
+    gap: 13px;
+  }
+
+  .section-header h2 {
+    font-size: 13px;
+  }
+
+  .section-header p {
+    font-size: 10px;
+  }
+
+  .member-table th {
+    padding: 12px 8px;
+    font-size: 9px;
+  }
+
+  .member-table td {
+    padding: 13px 8px;
+  }
+
+  .operation-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .operation-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .operation-row strong,
+  .operation-status {
+    font-size: 9px;
+  }
+
+  .operation-row small {
+    font-size: 9px;
+  }
+
+  .gym-banner {
+    min-height: 180px;
+  }
+
+  .gym-banner-content {
+    padding: 23px 18px;
+  }
+
+  .gym-banner-content h2 {
+    font-size: 23px;
+  }
+
+  .gym-banner-content p {
+    font-size: 11px;
+  }
+
+  .button {
+    min-height: 40px;
+    padding: 0 13px;
+    font-size: 11px;
+  }
+}
+
+/* REDUCED MOTION ACCESSIBILITY */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Keep the full application background clean and quiet */
+.app-shell {
+  min-height: 100vh;
+  background: #f2f6f2;
+}
+
+.main-area {
+  background: transparent;
+}
+
+.surface,
+.directory-panel,
+.members-panel,
+.activity-panel,
+.metric-card,
+.help-topic,
+.help-intro,
+.settings-panel {
+  background-color: rgba(255, 255, 255, .93);
+  backdrop-filter: blur(8px);
+}
+
+.member-table th {
+  background-color: rgba(247, 250, 247, .94);
+}
+
