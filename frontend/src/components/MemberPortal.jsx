@@ -129,19 +129,26 @@ export default function MemberPortal({ session, onLogout }) {
               <article><span><CreditCard size={18} /></span><small>PLAN</small><strong>{currentMembership?.planName ?? 'Choose a plan'}</strong></article>
               <article><span><UserRound size={18} /></span><small>MEMBER ID</small><strong>#{session.memberId ?? profile?.id ?? '—'}</strong></article>
             </section>
-            <section className="member-panel">
-              <div className="member-section-heading"><div><h2>Membership plans</h2><p>Prices and durations come from the Membership Service.</p></div></div>
+            <section className="member-panel member-overview-summary">
+              <div className="member-section-heading"><div><h2>Your membership</h2><p>A quick look at your current club plan.</p></div><button className="member-text-button" type="button" onClick={() => setPage('memberships')}>View memberships</button></div>
+              {currentMembership ? <div className="member-current-plan"><span className="member-current-plan-icon"><BadgeCheck size={19} /></span><div><strong>{currentMembership.planName}</strong><small>Active until {currentMembership.endDate}</small></div><span className="member-status">ACTIVE</span></div> : <p className="member-empty">No active plan. Open membership plans below to get started.</p>}
+            </section>
+            <details className="member-panel member-collapsible">
+              <summary><span><strong>Membership plans</strong><small>Compare prices and durations</small></span><span className="member-detail-count">{plans.length} plans</span></summary>
               <PlanCards plans={plans} active={Boolean(currentMembership)} busy={busy} onChoose={(plan) => changePlan(plan, Boolean(currentMembership))} />
-            </section>
-            <section className="member-panel">
-              <div className="member-section-heading"><div><h2>My memberships</h2><p>Personal membership records and status.</p></div><button className="member-text-button" type="button" onClick={() => setPage('memberships')}>View all</button></div>
-              {memberships.length ? <MembershipList items={memberships.slice(0, 3)} busy={busy} onCancel={cancelMembership} onPay={payDemo} /> : <p className="member-empty">No membership records yet. Choose a plan above to get started.</p>}
-            </section>
-            <section className="member-panel">
-              <div className="member-section-heading"><div><h2>Meet the trainers</h2><p>Browse the coaching team at your club.</p></div><button className="member-text-button" type="button" onClick={() => setPage('trainers')}>View all</button></div>
+            </details>
+            <details className="member-panel member-collapsible">
+              <summary><span><strong>Membership history</strong><small>Your plans, payments, and status</small></span><span className="member-detail-count">{memberships.length} records</span></summary>
+              {memberships.length ? <MembershipList items={memberships.slice(0, 3)} busy={busy} onCancel={cancelMembership} onPay={payDemo} /> : <p className="member-empty">No membership records yet.</p>}
+            </details>
+            <details className="member-panel member-collapsible">
+              <summary><span><strong>Meet the trainers</strong><small>Browse your club’s coaching team</small></span><span className="member-detail-count">{trainers.length} trainers</span></summary>
               <TrainerList trainers={trainers.slice(0, 4)} />
-            </section>
-            <PaymentHistory payments={payments} />
+            </details>
+            <details className="member-panel member-collapsible">
+              <summary><span><strong>Payment history</strong><small>Demo payments only · no real charges</small></span><span className="member-detail-count">{payments.length} payments</span></summary>
+              {payments.length ? <div className="member-table-scroll"><table><thead><tr><th>Payment</th><th>Membership</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.id}><td>#{payment.id}</td><td>#{payment.membershipId}</td><td>₹{payment.amount}</td><td>{payment.status}</td><td>{payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : '—'}</td></tr>)}</tbody></table></div> : <p className="member-empty">No payment records yet.</p>}
+            </details>
           </>}
           {page === 'memberships' && <section className="member-panel"><div className="member-section-heading"><div><h2>My memberships</h2><p>Memberships are tied to your member profile.</p></div></div>{memberships.length ? <MembershipList items={memberships} busy={busy} onCancel={cancelMembership} onPay={payDemo} /> : <p className="member-empty">No membership records yet.</p>}</section>}
           {page === 'trainers' && <section className="member-panel"><div className="member-section-heading"><div><h2>Trainers</h2><p>Trainer directory from the Trainer Service.</p></div></div><TrainerList trainers={trainers} /></section>}

@@ -1,0 +1,117 @@
+services:
+  # React frontend served by Nginx
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    image: gym-frontend:latest
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+  # Spring Boot API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: api-gateway
+    image: gym-api-gateway:latest
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in microservices/.env}
+      AUTH_SERVICE_URL: http://auth-service:8085
+      MEMBER_SERVICE_URL: http://member-service:8081
+      MEMBERSHIP_SERVICE_URL: http://membership-service:8082
+      TRAINER_SERVICE_URL: http://trainer-service:8084
+    ports:
+      - "8083:8083"
+    depends_on:
+      - auth-service
+      - member-service
+      - membership-service
+      - trainer-service
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+  # Authentication microservice
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: auth-service
+    image: gym-auth-service:latest
+    env_file:
+      - .env
+    environment:
+      AUTH_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_auth_db
+      MEMBER_SERVICE_URL: http://member-service:8081
+    expose:
+      - "8085"
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+  # Member microservice
+  member-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: member-service
+    image: gym-member-service:latest
+    env_file:
+      - .env
+    environment:
+      MEMBER_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_member_db
+    expose:
+      - "8081"
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+  # Membership microservice
+  membership-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: membership-service
+    image: gym-membership-service:latest
+    env_file:
+      - .env
+    environment:
+      MEMBERSHIP_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_membership_db
+      MEMBER_SERVICE_URL: http://member-service:8081
+    expose:
+      - "8082"
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+  # Trainer microservice
+  trainer-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: trainer-service
+    image: gym-trainer-service:latest
+    env_file:
+      - .env
+    environment:
+      TRAINER_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_trainer_db
+    expose:
+      - "8084"
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+networks:
+  gym-network:
+    driver: bridge
