@@ -1,33 +1,39 @@
-
 spring:
   application:
     name: api-gateway
-
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          secret-key: ${JWT_SECRET}
-
   cloud:
     gateway:
       server:
         webmvc:
           routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/auth/**
             - id: member-service
-              uri: http://localhost:8081
+              uri: ${MEMBER_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/members/**
-
             - id: membership-service
-              uri: http://localhost:8082
+              uri: ${MEMBERSHIP_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/memberships/**
-
             - id: trainer-service
-              uri: http://localhost:8084
+              uri: ${TRAINER_SERVICE_URL:http://localhost:8084}
               predicates:
                 - Path=/api/trainers/**
-
 server:
   port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%X{correlationId}] %logger{36} - %msg%n"

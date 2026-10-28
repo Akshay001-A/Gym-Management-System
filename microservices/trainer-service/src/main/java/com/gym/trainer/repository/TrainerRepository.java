@@ -1,22 +1,11 @@
-
 package com.gym.trainer.repository;
 
 import com.gym.trainer.entity.Trainer;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface TrainerRepository extends JpaRepository<Trainer, Long> {
-
+public interface TrainerRepository extends JpaRepository<Trainer, Long>, JpaSpecificationExecutor<Trainer> {
     Optional<Trainer> findByEmail(String email);
-
     boolean existsByEmail(String email);
-
-    List<Trainer> findBySpecializationContainingIgnoreCase(
-            String specialization);
-
-    List<Trainer> findByAvailabilityIgnoreCase(String availability);
-
-    List<Trainer> findByStatusIgnoreCase(String status);
 }

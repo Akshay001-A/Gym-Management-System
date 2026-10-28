@@ -6,6 +6,12 @@ export async function getMemberships({ signal } = {}) {
   return result
 }
 
+export async function getMembershipPlans({ signal } = {}) {
+  const result = await apiRequest('/memberships/plans', { signal })
+  if (!Array.isArray(result)) throw new ApiError('The Membership Service returned an invalid plan list.')
+  return result
+}
+
 export function getMembership(id, { signal } = {}) {
   return apiRequest(`/memberships/${encodeURIComponent(id)}`, { signal })
 }

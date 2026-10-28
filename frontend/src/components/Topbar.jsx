@@ -1,9 +1,16 @@
 import { useState } from "react";
 import { Bell, CalendarDays, ChevronDown, Menu, UserRound } from "lucide-react";
+import { clearSession, getSession } from "../api/client";
 
 export default function Topbar({ page, setMobileNav, setNotice }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const user = getSession();
+
+  function logout() {
+    clearSession();
+    window.dispatchEvent(new Event("gym-auth-expired"));
+  }
 
   const today = new Date().toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -70,7 +77,7 @@ export default function Topbar({ page, setMobileNav, setNotice }) {
           <button
             type="button"
             className="profile-trigger"
-            aria-label="Administrator profile"
+            aria-label="Account profile"
             aria-expanded={showProfile}
             onClick={() => {
               setShowProfile((current) => !current);
@@ -88,8 +95,8 @@ export default function Topbar({ page, setMobileNav, setNotice }) {
                   <UserRound size={18} />
                 </span>
                 <div>
-                  <strong>Administrator</strong>
-                  <p>Club manager</p>
+                  <strong>{user?.name || "Administrator"}</strong>
+                  <p>{user?.role || "ADMIN"} account</p>
                 </div>
               </div>
               <button
@@ -97,10 +104,10 @@ export default function Topbar({ page, setMobileNav, setNotice }) {
                 className="popover-action"
                 onClick={() => {
                   setShowProfile(false);
-                  setNotice("Profile settings are not connected yet.");
+                  logout();
                 }}
               >
-                Profile settings
+                Sign out
               </button>
             </div>
           )}

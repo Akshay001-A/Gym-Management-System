@@ -36,6 +36,9 @@ public class Member {
 
     private String gender;
     private String fatherName;
+
+    @Column(name = "registration_key", unique = true, length = 36)
+    private String registrationKey;
     private BigDecimal amount;
 
     public Member() {
@@ -103,6 +106,14 @@ public class Member {
 
     public void setFatherName(String fatherName) {
         this.fatherName = fatherName;
+    }
+
+    public String getRegistrationKey() {
+        return registrationKey;
+    }
+
+    public void setRegistrationKey(String registrationKey) {
+        this.registrationKey = registrationKey;
     }
 
     public BigDecimal getAmount() {

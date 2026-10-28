@@ -1,129 +1,52 @@
-
 package com.gym.authservice.client;
 
 import com.gym.authservice.dto.MemberProfileRequest;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.gym.authservice.dto.MemberProfileResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class MemberServiceClient {
-
-    private static final Logger log =
-            LoggerFactory.getLogger(MemberServiceClient.class);
-
     private final RestClient restClient;
+    private final String internalServiceKey;
 
-    public MemberServiceClient(
-            RestClient.Builder builder,
-            @Value("${app.member-service.url:http://localhost:8081}")
-            String memberServiceUrl) {
-
-        this.restClient = builder
-                .baseUrl(memberServiceUrl)
-                .build();
+    public MemberServiceClient(RestClient.Builder builder,
+            @Value("${app.member-service.url:http://localhost:8081}") String memberServiceUrl,
+            @Value("${app.internal-service.key:}") String internalServiceKey) {
+        this.restClient = builder.baseUrl(memberServiceUrl).build();
+        this.internalServiceKey = internalServiceKey;
     }
 
-    /**
-     * Creates a member profile through Member Service.
-     */
-    public void createMemberProfile(MemberProfileRequest request) {
+    public Long createMemberProfile(MemberProfileRequest request, String registrationKey) {
         try {
-            restClient.post()
-                    .uri("/api/members")
+            MemberProfileResponse response = restClient.post()
+                    .uri("/api/members/internal")
+                    .header("X-Internal-Service-Key", internalServiceKey)
+                    .header("X-Registration-Key", registrationKey)
                     .body(request)
                     .retrieve()
-                    .toBodilessEntity();
-
-            log.info("Member profile created successfully");
-
-        } catch (RestClientResponseException ex) {
-
-            String responseBody = ex.getResponseBodyAsString();
-
-            log.warn(
-                    "Member Service rejected profile. HTTP status: {}, "
-                            + "Response: {}",
-                    ex.getStatusCode().value(),
-                    responseBody
-            );
-
-            // Keep the original exception as the cause.
-            // AuthService can inspect its response body.
-            throw new IllegalStateException(
-                    "Member Service rejected the profile. HTTP "
-                            + ex.getStatusCode().value()
-                            + ". Response: "
-                            + responseBody,
-                    ex
-            );
-
+                    .body(MemberProfileResponse.class);
+            if (response == null || response.id() == null) {
+                throw new IllegalStateException("Member Service returned no profile ID");
+            }
+            return response.id();
         } catch (RestClientException ex) {
-
-            log.error(
-                    "Unable to communicate with Member Service",
-                    ex
-            );
-
-            throw new IllegalStateException(
-                    "Could not communicate with Member Service. "
-                            + "Please try again later.",
-                    ex
-            );
+            throw new IllegalStateException("Member Service could not create the profile", ex);
         }
     }
 
-    /**
-     * Deletes a member profile through Member Service.
-     */
     public void deleteMemberProfile(Long memberId) {
         try {
             restClient.delete()
-                    .uri("/api/members/{id}", memberId)
+                    .uri("/api/members/internal/{id}", memberId)
+                    .header("X-Internal-Service-Key", internalServiceKey)
                     .retrieve()
                     .toBodilessEntity();
-
-            log.info("Member profile deletion requested for ID {}",
-                    memberId);
-
-        } catch (RestClientResponseException ex) {
-
-            log.warn(
-                    "Member Service rejected profile deletion for ID {}. "
-                            + "HTTP status: {}, Response: {}",
-                    memberId,
-                    ex.getStatusCode().value(),
-                    ex.getResponseBodyAsString()
-            );
-
-            throw new IllegalStateException(
-                    "Member profile deletion failed. HTTP "
-                            + ex.getStatusCode().value()
-                            + ". Response: "
-                            + ex.getResponseBodyAsString(),
-                    ex
-            );
-
         } catch (RestClientException ex) {
-
-            log.error(
-                    "Unable to communicate with Member Service "
-                            + "while deleting profile ID {}",
-                    memberId,
-                    ex
-            );
-
-            throw new IllegalStateException(
-                    "Could not communicate with Member Service "
-                            + "while deleting the profile.",
-                    ex
-            );
+            throw new IllegalStateException("Member Service could not remove the unlinked profile", ex);
         }
     }
 }

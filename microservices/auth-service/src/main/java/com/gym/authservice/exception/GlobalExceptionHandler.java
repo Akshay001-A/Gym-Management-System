@@ -35,6 +35,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", Instant.now().toString());
         body.put("status", status.value());
+        body.put("code", status.name());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
         body.put("path", request.getRequestURI());

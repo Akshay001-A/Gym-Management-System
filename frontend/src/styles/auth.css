@@ -1,0 +1,76 @@
+.auth-screen{min-height:100vh;display:grid;place-items:center;padding:28px;background:linear-gradient(rgba(10,18,15,.48),rgba(10,18,15,.48)),url('/images/gym-interior.jpg') center/cover fixed}
+.auth-card{width:min(100%,480px);padding:clamp(24px,5vw,42px);background:rgba(255,255,255,.98);border:1px solid rgba(255,255,255,.82);border-radius:20px;box-shadow:0 24px 80px rgba(5,16,10,.3)}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.auth-brand>span{width:46px;height:46px;display:grid;place-items:center;color:#fff;background:#247951;border-radius:14px}
+.auth-brand>div{display:grid;gap:3px}.auth-brand strong{font:800 16px Manrope,sans-serif;letter-spacing:.05em;color:#19382c}.auth-brand small{font-size:9px;letter-spacing:.16em;color:#718278}
+.auth-eyebrow,.member-eyebrow{margin-bottom:8px;color:#247951;font-size:11px;font-weight:700;letter-spacing:.15em}
+.auth-card h1{margin:0 0 8px;font:750 clamp(25px,4vw,32px) Manrope,sans-serif;letter-spacing:-.04em}
+.auth-description{margin:0 0 24px;color:#718278;font-size:14px;line-height:1.6}
+.auth-tabs{display:flex;gap:8px;padding:5px;margin-bottom:20px;background:#f2f6f2;border-radius:12px}
+.auth-tab{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;color:#718278;font-weight:700;cursor:pointer}
+.auth-tab.active{background:#fff;color:#164b36;box-shadow:0 2px 8px rgba(24,61,42,.08)}
+.auth-form{display:grid;gap:14px}.auth-form label,.member-profile-form label{display:grid;gap:7px;color:#365548;font-size:12px;font-weight:700}
+.auth-form input,.auth-form select,.member-profile-form input{width:100%;height:44px;padding:0 12px;color:#19382c;background:#fff;border:1px solid #dfe9e1;border-radius:10px;font-size:14px}
+.auth-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.auth-submit{width:100%;min-height:46px;display:flex;align-items:center;justify-content:center;gap:9px;margin-top:4px;color:#fff;background:#247951;border:0;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer}
+.auth-submit:hover{background:#164b36}.auth-submit:disabled{opacity:.65;cursor:wait}
+.auth-error{margin:0;padding:11px 12px;color:#9c2f2f;background:#fff1f0;border:1px solid #f0d0cd;border-radius:9px;font-size:13px}
+.auth-footnote{display:flex;gap:8px;margin-top:21px;color:#718278;font-size:11px;line-height:1.5}.auth-footnote svg{flex:none;color:#247951}
+.auth-admin-note{margin:13px 0 0;padding-top:13px;color:#718278;border-top:1px solid #edf1ed;font-size:11px;line-height:1.5}
+@media(max-width:520px){.auth-screen{padding:14px;background-attachment:scroll}.auth-card{padding:24px 20px;border-radius:17px}.auth-form-row{grid-template-columns:1fr}}
+
+/* Split welcome layout for the authentication screen. */
+.auth-screen{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;padding:0 clamp(18px,5vw,76px);background:linear-gradient(110deg,rgba(8,19,14,.78) 0%,rgba(8,19,14,.58) 52%,rgba(8,19,14,.4) 100%),url('/images/gym-interior.jpg') center/cover fixed}
+.auth-topbar{width:min(1320px,100%);min-height:86px;display:flex;align-items:center;justify-content:space-between;gap:24px;border-bottom:1px solid rgba(255,255,255,.18)}
+.auth-logo{display:flex;align-items:center;margin-left:clamp(8px,1.5vw,20px);padding:4px 10px;background:#fff;border-radius:10px;box-shadow:0 5px 20px rgba(0,0,0,.12)}
+.auth-logo img{display:block;width:176px;height:auto}
+.auth-topbar nav{display:flex;align-items:center;gap:clamp(18px,3vw,38px)}
+.auth-topbar nav a{display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,.84);font-size:13px;font-weight:650;text-decoration:none;transition:color .2s ease}
+.auth-topbar nav a:hover{color:#fff}
+.auth-layout{width:min(1080px,100%);flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(390px,460px);align-items:center;gap:clamp(32px,5vw,72px);padding:40px 0}
+.auth-intro{max-width:560px;color:#fff;animation:auth-enter .6s ease both}
+.auth-intro .auth-eyebrow{display:flex;align-items:center;gap:9px;margin:0 0 22px;color:#d8f1df}
+.auth-intro .auth-eyebrow span{width:8px;height:8px;background:#6bd096;border-radius:50%;box-shadow:0 0 0 5px rgba(107,208,150,.17)}
+.auth-intro h1{margin:0 0 20px;color:#fff;font:800 clamp(42px,6vw,72px)/1.04 Manrope,sans-serif;letter-spacing:-.055em}
+.auth-intro h1 em{color:#a7e1b8;font-style:normal}
+.auth-intro-copy{max-width:470px;margin:0;color:rgba(255,255,255,.8);font-size:clamp(15px,1.6vw,18px);line-height:1.75}
+.auth-benefits{display:grid;gap:12px;max-width:440px;margin-top:34px}
+.auth-benefits article{display:flex;align-items:center;gap:13px;padding:13px 15px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.17);border-radius:12px;backdrop-filter:blur(5px)}
+.auth-benefits article>span{width:39px;height:39px;display:grid;place-items:center;flex:none;color:#c4f0d0;background:rgba(46,144,89,.35);border-radius:10px}
+.auth-benefits article div{display:grid;gap:4px}.auth-benefits strong{color:#fff;font-size:13px}.auth-benefits small{color:rgba(255,255,255,.7);font-size:11px}
+.auth-trust{display:flex;align-items:center;gap:8px;margin:25px 0 0;color:rgba(255,255,255,.76);font-size:11px}.auth-trust span{display:grid;place-items:center;color:#a7e1b8}
+.auth-card{position:relative;left:clamp(-48px,-3vw,-20px);width:100%;padding:clamp(25px,3.2vw,38px);background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.75);border-radius:18px;box-shadow:0 24px 80px rgba(2,12,7,.34);animation:auth-enter .65s .08s ease both}
+.auth-card h2{margin:0 0 8px;color:#19382c;font:750 clamp(25px,3vw,31px) Manrope,sans-serif;letter-spacing:-.04em}
+.auth-card>.auth-eyebrow{margin:0 0 8px}
+.auth-description{margin-bottom:20px}
+.auth-screen{scroll-behavior:smooth}
+.auth-layout [id],.auth-card{scroll-margin-top:24px}
+.auth-form.is-register{gap:10px}
+.auth-register-credentials{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.auth-form.is-register input,.auth-form.is-register select{height:41px}
+.auth-footer{width:min(1320px,100%);display:flex;justify-content:space-between;gap:20px;padding:17px 0 20px;color:rgba(255,255,255,.68);border-top:1px solid rgba(255,255,255,.16);font-size:10px;letter-spacing:.06em}
+@keyframes auth-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:900px){.auth-screen{padding:0 24px}.auth-topbar{min-height:74px}.auth-layout{grid-template-columns:minmax(0,1fr) minmax(340px,420px);gap:32px}.auth-card{left:-18px}.auth-intro h1{font-size:clamp(38px,5.4vw,56px)}.auth-benefits{margin-top:24px}}
+@media(max-width:700px){.auth-screen{min-height:100vh;padding:0 16px;background-attachment:scroll}.auth-topbar{min-height:70px;flex-wrap:wrap;gap:8px;padding:12px 0}.auth-logo img{width:132px}.auth-topbar nav{width:100%;justify-content:space-between;gap:6px}.auth-topbar nav a{font-size:11px}.auth-layout{width:min(480px,100%);grid-template-columns:1fr;gap:25px;padding:30px 0}.auth-intro{max-width:none}.auth-intro .auth-eyebrow{margin-bottom:13px}.auth-intro h1{margin-bottom:12px;font-size:clamp(37px,10vw,54px)}.auth-intro-copy{font-size:14px;line-height:1.55}.auth-benefits{grid-template-columns:1fr 1fr;gap:9px;margin-top:17px}.auth-benefits article{align-items:flex-start;gap:9px;padding:10px}.auth-benefits article>span{width:32px;height:32px}.auth-benefits article strong{font-size:11px}.auth-benefits article small{font-size:10px;line-height:1.4}.auth-trust{margin-top:15px;font-size:10px}.auth-card{left:0;padding:24px 20px;border-radius:16px}.auth-footer{font-size:9px}}
+@media(max-width:520px){.auth-register-credentials{grid-template-columns:1fr;gap:10px}}
+@media(max-width:420px){.auth-screen{padding:0 12px}.auth-topbar nav a{font-size:10px}.auth-benefits{grid-template-columns:1fr}.auth-benefits article{align-items:center}.auth-layout{gap:20px;padding:24px 0}.auth-intro h1{font-size:38px}.auth-footer{flex-direction:column;gap:5px}}
+@media(prefers-reduced-motion:reduce){.auth-intro,.auth-card{animation:none}.auth-topbar nav a{transition:none}}
+
+/* Clean club welcome background without a photo. */
+.auth-screen{background:radial-gradient(ellipse at 18% 12%,#f7fbf7 0%,transparent 42%),linear-gradient(135deg,#e8f1e9 0%,#dce9df 100%)}
+.auth-topbar{border-bottom-color:rgba(37,121,81,.16)}
+.auth-topbar nav a{color:#466052}
+.auth-topbar nav a:hover{color:#176b49}
+.auth-intro{color:#19382c}
+.auth-intro .auth-eyebrow{color:#247951}
+.auth-intro .auth-eyebrow span{background:#36a875;box-shadow:0 0 0 5px rgba(54,168,117,.14)}
+.auth-intro h1{color:#173b2d}
+.auth-intro h1 em{color:#25845a}
+.auth-intro-copy{color:#61756b}
+.auth-benefits article{background:rgba(255,255,255,.62);border-color:rgba(37,121,81,.13);box-shadow:0 8px 22px rgba(25,56,44,.05);backdrop-filter:none}
+.auth-benefits article>span{color:#247951;background:#e4f1e8}
+.auth-benefits strong{color:#19382c}
+.auth-benefits small{color:#718278}
+.auth-trust{color:#61756b}
+.auth-trust span{color:#247951}
+.auth-footer{color:#718278;border-top-color:rgba(37,121,81,.16)}
