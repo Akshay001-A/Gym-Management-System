@@ -17,8 +17,11 @@ import com.gym.authservice.repository.PasswordResetChallengeRepository;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.core.io.ClassPathResource;
+import jakarta.mail.internet.MimeMessage;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
@@ -115,15 +118,12 @@ public class AuthService {
         }
         String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(mailFrom);
-            message.setTo(newEmail);
-            message.setSubject("Form & Fit email change verification");
-            message.setText("Your Form & Fit email change code is " + code
-                    + ". It expires in " + codeExpirationMinutes
-                    + " minutes. If you did not request this, ignore this email.");
-            mailSenderProvider.getObject().send(message);
-        } catch (RuntimeException exception) {
+            sendBrandedOtpEmail(mailSenderProvider.getObject(), newEmail,
+                    "Verify your new email | Form & Fit", "Verify your new email",
+                    "Enter this one-time code in your member profile to confirm the change to your sign-in email.",
+                    code, "Didn’t request this?",
+                    "Ignore this email. Your current email will stay on your account unless you enter the code in your profile.");
+        } catch (Exception exception) {
             Throwable rootCause = exception;
             while (rootCause.getCause() != null && rootCause.getCause() != rootCause) rootCause = rootCause.getCause();
             log.warn("Could not send email change verification; mailError={}, rootCause={}",
@@ -134,6 +134,46 @@ public class AuthService {
         emailChangeChallengeRepository.save(new EmailChangeChallenge(account.getId(), newEmail,
                 passwordEncoder.encode(code), now.plus(Duration.ofMinutes(codeExpirationMinutes))));
         return new RegistrationCodeResponse(maskEmail(newEmail), "A verification code was sent to your new email address.");
+    }
+
+    private void sendBrandedOtpEmail(JavaMailSender mailSender, String to, String subject,
+            String heading, String description, String code, String noticeHeading, String notice) throws Exception {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+        helper.setFrom(mailFrom);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        String plainText = "FORM & FIT\n\n" + heading + "\n\n" + description + "\n\n"
+                + "Your verification code: " + code + "\n"
+                + "This code expires in " + codeExpirationMinutes + " minutes.\n\n"
+                + noticeHeading + " " + notice + "\n\nForm & Fit Gym Management";
+        helper.setText(plainText, brandedOtpHtml(heading, description, code, noticeHeading, notice));
+        helper.addInline("formFitGymLogo",
+                new ClassPathResource("mail/form-fit-gym-logo.png"), "image/png");
+        mailSender.send(message);
+    }
+
+    private String brandedOtpHtml(String heading, String description, String code,
+            String noticeHeading, String notice) {
+        return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>"
+                + "<body style=\"margin:0;padding:0;background:#f3f7f4;font-family:Arial,Helvetica,sans-serif;color:#173b2c;\">"
+                + "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#f3f7f4;padding:32px 12px;\"><tr><td align=\"center\">"
+                + "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#ffffff;border:1px solid #dce9df;border-radius:16px;overflow:hidden;\">"
+                + "<tr><td align=\"center\" style=\"padding:16px 24px;background:#f4f8f5;border-bottom:1px solid #dce9df;\"><img src=\"cid:formFitGymLogo\" width=\"360\" alt=\"FORM &amp; FIT Fitness Club\" style=\"display:block;width:100%;max-width:360px;height:auto;border:0;\"></td></tr>"
+                + "<tr><td style=\"padding:32px;\"><div style=\"font-size:12px;letter-spacing:1.5px;font-weight:700;color:#247951;\">ACCOUNT SECURITY</div>"
+                + "<h1 style=\"margin:12px 0 10px;font-size:25px;line-height:1.25;color:#173b2c;\">" + escapeHtml(heading) + "</h1>"
+                + "<p style=\"margin:0;font-size:15px;line-height:1.6;color:#607168;\">" + escapeHtml(description) + "</p>"
+                + "<div style=\"margin:26px 0;padding:18px 12px;text-align:center;background:#f4f8f5;border:1px solid #dce9df;border-radius:12px;\"><div style=\"font-size:11px;letter-spacing:1.5px;font-weight:700;color:#718278;\">YOUR VERIFICATION CODE</div>"
+                + "<div style=\"margin-top:8px;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:8px;color:#176342;\">" + code + "</div></div>"
+                + "<p style=\"margin:0;font-size:13px;line-height:1.6;color:#607168;\">This code expires in <strong>" + codeExpirationMinutes + " minutes</strong>. For your security, do not share it with anyone.</p>"
+                + "<div style=\"margin-top:22px;padding:14px 16px;background:#fbf8ef;border:1px solid #eee5c9;border-radius:10px;font-size:13px;line-height:1.6;color:#6d603c;\"><strong>" + escapeHtml(noticeHeading) + "</strong> " + escapeHtml(notice) + "</div>"
+                + "</td></tr><tr><td style=\"padding:18px 32px;border-top:1px solid #edf1ee;font-size:12px;line-height:1.5;color:#839087;\">Form &amp; Fit Gym Management<br>Automated security message — please do not reply.</td></tr>"
+                + "</table></td></tr></table></body></html>";
+    }
+
+    private String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
     @Transactional
@@ -232,14 +272,10 @@ public class AuthService {
         String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(mailFrom);
-            message.setTo(email);
-            message.setSubject("Form & Fit member account verification");
-            message.setText("Your Form & Fit verification code is " + code
-                    + ". It expires in " + codeExpirationMinutes + " minutes. If you did not request this, ignore this email.");
-            mailSender.send(message);
-        } catch (RuntimeException exception) {
+            sendBrandedOtpEmail(mailSender, email, "Verify your member account | Form & Fit",
+                    "Verify your member account", "Enter this one-time code to finish creating your Form & Fit member account.",
+                    code, "Didn’t request an account?", "Ignore this email. Your account will not be created unless this code is entered during sign up.");
+        } catch (Exception exception) {
             Throwable rootCause = exception;
             while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
                 rootCause = rootCause.getCause();
@@ -319,14 +355,10 @@ public class AuthService {
         }
         String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(mailFrom);
-            message.setTo(email);
-            message.setSubject("Form & Fit password reset code");
-            message.setText("Your Form & Fit password reset code is " + code
-                    + ". It expires in " + codeExpirationMinutes + " minutes. If you did not request this, ignore this email.");
-            mailSenderProvider.getObject().send(message);
-        } catch (RuntimeException exception) {
+            sendBrandedOtpEmail(mailSenderProvider.getObject(), email, "Reset your password | Form & Fit",
+                    "Reset your password", "Enter this one-time code on the password reset page to continue.",
+                    code, "Didn’t request a reset?", "Ignore this email. Your password will not change unless this code is entered on the password reset page.");
+        } catch (Exception exception) {
             Throwable rootCause = exception;
             while (rootCause.getCause() != null && rootCause.getCause() != rootCause) rootCause = rootCause.getCause();
             log.warn("Could not send password reset email; mailError={}, rootCause={}",
