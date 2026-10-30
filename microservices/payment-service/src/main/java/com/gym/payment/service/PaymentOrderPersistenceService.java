@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.Duration;
+import java.time.LocalDate;
 
 @Service
 public class PaymentOrderPersistenceService {
@@ -100,6 +102,18 @@ public class PaymentOrderPersistenceService {
             RazorpayService.RazorpayPayment gatewayPayment,
             Long membershipId
     ) {
+        return markPaymentSuccessful(memberId, orderId, gatewayPayment, membershipId, null, null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment markPaymentSuccessful(
+            Long memberId,
+            String orderId,
+            RazorpayService.RazorpayPayment gatewayPayment,
+            Long membershipId,
+            LocalDate membershipStartDate,
+            LocalDate membershipEndDate
+    ) {
         Payment payment = paymentRepository
                 .findByRazorpayOrderIdForUpdate(orderId)
                 .orElseThrow(() -> new PaymentNotFoundException(
@@ -136,6 +150,8 @@ public class PaymentOrderPersistenceService {
 
         payment.setRazorpayPaymentId(gatewayPayment.paymentId());
         payment.setMembershipId(membershipId);
+        payment.setMembershipStartDate(membershipStartDate);
+        payment.setMembershipEndDate(membershipEndDate);
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setFailureReason(null);
         payment.setVerifiedAt(Instant.now());
@@ -143,7 +159,33 @@ public class PaymentOrderPersistenceService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment claimReceiptEmail(Long paymentId) {
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException("Payment record was not found"));
+        if (payment.getStatus() != PaymentStatus.SUCCESS || payment.getReceiptEmailSentAt() != null) return null;
+        Instant now = Instant.now();
+        Instant lastAttempt = payment.getReceiptEmailClaimedAt();
+        if (lastAttempt != null && lastAttempt.isAfter(now.minus(Duration.ofMinutes(5)))) return null;
+        payment.setReceiptEmailClaimedAt(now);
+        return paymentRepository.saveAndFlush(payment);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markReceiptEmailSent(Long paymentId) {
+        Payment payment = findPayment(paymentId);
+        if (payment.getStatus() != PaymentStatus.SUCCESS) return;
+        payment.setReceiptEmailSentAt(Instant.now());
+        payment.setReceiptEmailClaimedAt(null);
+        paymentRepository.saveAndFlush(payment);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void linkMembership(Long paymentId, Long membershipId) {
+        linkMembership(paymentId, membershipId, null, null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void linkMembership(Long paymentId, Long membershipId, LocalDate startDate, LocalDate endDate) {
         Payment payment = findPayment(paymentId);
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new IllegalStateException("Only a verified payment can be linked to a membership");
@@ -152,6 +194,8 @@ public class PaymentOrderPersistenceService {
             throw new IllegalStateException("Payment is already linked to another membership");
         }
         payment.setMembershipId(membershipId);
+        payment.setMembershipStartDate(startDate);
+        payment.setMembershipEndDate(endDate);
         paymentRepository.saveAndFlush(payment);
     }
 

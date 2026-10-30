@@ -136,6 +136,10 @@ public class MembershipIntegrationService {
     }
 
     public Long activatePaidMembership(Long paymentId, Long memberId, String planName) {
+        return activatePaidMembershipWithDetails(paymentId, memberId, planName).membershipId();
+    }
+
+    public ActivatedMembership activatePaidMembershipWithDetails(Long paymentId, Long memberId, String planName) {
         if (internalServiceKey == null || internalServiceKey.isBlank()) {
             throw new PaymentProcessingException("Membership activation is not configured");
         }
@@ -154,11 +158,24 @@ public class MembershipIntegrationService {
             if (!(id instanceof Number membershipId) || membershipId.longValue() <= 0) {
                 throw new PaymentProcessingException("Membership Service returned no activated membership ID");
             }
-            return membershipId.longValue();
+            LocalDate startDate = parseDate(response.get("startDate"), "start date");
+            LocalDate endDate = parseDate(response.get("endDate"), "end date");
+            return new ActivatedMembership(membershipId.longValue(), startDate, endDate);
         } catch (RestClientException exception) {
             throw new PaymentProcessingException("Membership Service could not activate the paid plan", exception);
         }
     }
+
+    private LocalDate parseDate(Object value, String label) {
+        if (value == null) throw new PaymentProcessingException("Membership Service returned no membership " + label);
+        try {
+            return LocalDate.parse(value.toString());
+        } catch (RuntimeException exception) {
+            throw new PaymentProcessingException("Membership Service returned an invalid membership " + label, exception);
+        }
+    }
+
+    public record ActivatedMembership(Long membershipId, LocalDate startDate, LocalDate endDate) { }
 
     public void ensureMemberCanChangePlan(String memberAccessToken) {
         if (memberAccessToken == null || memberAccessToken.isBlank()) {

@@ -35,6 +35,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByIdAndMemberId(Long id, Long memberId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Payment p WHERE p.id = :paymentId")
+    Optional<Payment> findByIdForUpdate(@Param("paymentId") Long paymentId);
+
     Page<Payment> findByMemberIdOrderByCreatedAtDesc(
             Long memberId,
             Pageable pageable

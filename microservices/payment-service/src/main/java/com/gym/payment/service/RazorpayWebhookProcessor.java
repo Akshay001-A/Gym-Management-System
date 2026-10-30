@@ -139,9 +139,11 @@ public class RazorpayWebhookProcessor {
             // A captured payment can supersede an earlier failed attempt
             // for the same order.
             payment.setRazorpayPaymentId(paymentId);
-            Long membershipId = membershipIntegrationService.activatePaidMembership(
+            MembershipIntegrationService.ActivatedMembership activation = membershipIntegrationService.activatePaidMembershipWithDetails(
                     payment.getId(), payment.getMemberId(), payment.getPlanName());
-            payment.setMembershipId(membershipId);
+            payment.setMembershipId(activation.membershipId());
+            payment.setMembershipStartDate(activation.startDate());
+            payment.setMembershipEndDate(activation.endDate());
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setFailureReason(null);
             payment.setVerifiedAt(Instant.now());

@@ -21,11 +21,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,19 +42,31 @@ public class PaymentService {
     private final MembershipIntegrationService membershipIntegrationService;
     private final PaymentOrderPersistenceService orderPersistenceService;
     private final MemberDirectoryClient memberDirectoryClient;
+    private final PaymentEmailService paymentEmailService;
 
+    @Autowired
     public PaymentService(
             PaymentRepository paymentRepository,
             RazorpayService razorpayService,
             MembershipIntegrationService membershipIntegrationService,
             PaymentOrderPersistenceService orderPersistenceService,
-            MemberDirectoryClient memberDirectoryClient
+            MemberDirectoryClient memberDirectoryClient,
+            PaymentEmailService paymentEmailService
     ) {
         this.paymentRepository = paymentRepository;
         this.razorpayService = razorpayService;
         this.membershipIntegrationService = membershipIntegrationService;
         this.orderPersistenceService = orderPersistenceService;
         this.memberDirectoryClient = memberDirectoryClient;
+        this.paymentEmailService = paymentEmailService;
+    }
+
+    public PaymentService(PaymentRepository paymentRepository, RazorpayService razorpayService,
+            MembershipIntegrationService membershipIntegrationService,
+            PaymentOrderPersistenceService orderPersistenceService,
+            MemberDirectoryClient memberDirectoryClient) {
+        this(paymentRepository, razorpayService, membershipIntegrationService,
+                orderPersistenceService, memberDirectoryClient, null);
     }
 
     // IMPORTANT: Do not add @Transactional to this method.
@@ -261,6 +276,7 @@ public class PaymentService {
         if (payment.getStatus() == PaymentStatus.SUCCESS) {
             if (request.getRazorpayPaymentId()
                     .equals(payment.getRazorpayPaymentId())) {
+                sendReceiptIfConfigured(payment.getId());
                 return toPaymentResponse(payment);
             }
 
@@ -312,14 +328,19 @@ public class PaymentService {
             );
         }
 
-        Long membershipId = membershipIntegrationService.activatePaidMembership(
+        MembershipIntegrationService.ActivatedMembership activation = membershipIntegrationService.activatePaidMembershipWithDetails(
                 payment.getId(), memberId, payment.getPlanName());
-        return toPaymentResponse(orderPersistenceService.markPaymentSuccessful(
+        if (activation == null) {
+            Long membershipId = membershipIntegrationService.activatePaidMembership(payment.getId(), memberId, payment.getPlanName());
+            activation = fallbackActivation(membershipId, payment.getPlanName());
+        }
+        Payment successfulPayment = orderPersistenceService.markPaymentSuccessful(
                 memberId,
                 payment.getRazorpayOrderId(),
                 gatewayPayment,
-                membershipId
-        ));
+                activation.membershipId(), activation.startDate(), activation.endDate());
+        sendReceiptIfConfigured(successfulPayment.getId());
+        return toPaymentResponse(successfulPayment);
     }
 
     @Transactional(readOnly = true)
@@ -424,13 +445,35 @@ public class PaymentService {
         }
         if (candidate == null) return;
         try {
-            Long membershipId = membershipIntegrationService.activatePaidMembership(
-                    candidate.getId(), memberId, candidate.getPlanName());
-            orderPersistenceService.linkMembership(candidate.getId(), membershipId);
+            MembershipIntegrationService.ActivatedMembership activation = membershipIntegrationService
+                    .activatePaidMembershipWithDetails(candidate.getId(), memberId, candidate.getPlanName());
+            if (activation == null) {
+                Long membershipId = membershipIntegrationService.activatePaidMembership(candidate.getId(), memberId, candidate.getPlanName());
+                activation = fallbackActivation(membershipId, candidate.getPlanName());
+            }
+            orderPersistenceService.linkMembership(candidate.getId(), activation.membershipId(),
+                    activation.startDate(), activation.endDate());
+            sendReceiptIfConfigured(candidate.getId());
         } catch (RuntimeException exception) {
             log.warn("Could not restore membership for verified payment; paymentId={}, errorType={}",
                     candidate.getId(), exception.getClass().getSimpleName());
         }
+    }
+
+    private MembershipIntegrationService.ActivatedMembership fallbackActivation(Long membershipId, String planName) {
+        int months = switch (planName == null ? "" : planName.toUpperCase(Locale.ROOT)) {
+            case "MONTHLY" -> 1;
+            case "QUARTERLY" -> 3;
+            case "YEARLY" -> 12;
+            default -> 1;
+        };
+        LocalDate start = LocalDate.now();
+        return new MembershipIntegrationService.ActivatedMembership(membershipId, start, start.plus(months, ChronoUnit.MONTHS));
+    }
+
+    private void sendReceiptIfConfigured(Long paymentId) {
+        if (paymentEmailService == null || paymentId == null) return;
+        paymentEmailService.sendReceiptIfNeeded(paymentId);
     }
 
     private CreatePaymentResponse toCreatePaymentResponse(

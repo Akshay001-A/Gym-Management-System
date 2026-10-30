@@ -74,6 +74,18 @@ public class Payment {
     @Column(name = "verified_at")
     private Instant verifiedAt;
 
+    @Column(name = "membership_start_date")
+    private java.time.LocalDate membershipStartDate;
+
+    @Column(name = "membership_end_date")
+    private java.time.LocalDate membershipEndDate;
+
+    @Column(name = "receipt_email_claimed_at")
+    private Instant receiptEmailClaimedAt;
+
+    @Column(name = "receipt_email_sent_at")
+    private Instant receiptEmailSentAt;
+
     protected Payment() {
     }
 
@@ -192,4 +204,20 @@ public class Payment {
     public void setVerifiedAt(Instant verifiedAt) {
         this.verifiedAt = verifiedAt;
     }
+
+    public java.time.LocalDate getMembershipStartDate() { return membershipStartDate; }
+
+    public void setMembershipStartDate(java.time.LocalDate membershipStartDate) { this.membershipStartDate = membershipStartDate; }
+
+    public java.time.LocalDate getMembershipEndDate() { return membershipEndDate; }
+
+    public void setMembershipEndDate(java.time.LocalDate membershipEndDate) { this.membershipEndDate = membershipEndDate; }
+
+    public Instant getReceiptEmailClaimedAt() { return receiptEmailClaimedAt; }
+
+    public void setReceiptEmailClaimedAt(Instant receiptEmailClaimedAt) { this.receiptEmailClaimedAt = receiptEmailClaimedAt; }
+
+    public Instant getReceiptEmailSentAt() { return receiptEmailSentAt; }
+
+    public void setReceiptEmailSentAt(Instant receiptEmailSentAt) { this.receiptEmailSentAt = receiptEmailSentAt; }
 }
