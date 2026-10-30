@@ -134,6 +134,7 @@ services:
     environment:
       PAYMENT_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_payment_db
       MEMBERSHIP_SERVICE_URL: http://membership-service:8082
+      MEMBER_SERVICE_URL: http://member-service:8081
     ports:
       - "8086:8086"
     depends_on:

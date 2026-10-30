@@ -4,6 +4,7 @@ import com.gym.payment.dto.CreatePaymentRequest;
 import com.gym.payment.dto.CreatePaymentResponse;
 import com.gym.payment.dto.PaymentResponse;
 import com.gym.payment.dto.MonthlyRevenueResponse;
+import com.gym.payment.dto.RevenueReportResponse;
 import com.gym.payment.dto.VerifyPaymentRequest;
 import com.gym.payment.service.PaymentService;
 import jakarta.validation.Valid;
@@ -28,6 +29,16 @@ public class PaymentController {
     @GetMapping("/admin/revenue/monthly")
     public ResponseEntity<MonthlyRevenueResponse> getMonthlyRevenue() {
         return ResponseEntity.ok(paymentService.getCurrentMonthRevenue());
+    }
+
+    @GetMapping("/admin/revenue/report")
+    public ResponseEntity<RevenueReportResponse> getRevenueReport(
+            @RequestParam(defaultValue = "MONTHLY") String period,
+            @RequestParam int year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+        return ResponseEntity.ok(paymentService.getRevenueReport(period, year, month, page, size));
     }
 
     /**

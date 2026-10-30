@@ -1,0 +1,43 @@
+.revenue-page { display: grid; gap: 22px; }
+.revenue-title-row { align-items: center; }
+.revenue-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; padding: 16px; }
+.revenue-controls > label { display: grid; gap: 7px; color: var(--text-muted, #65766d); font-size: 12px; font-weight: 700; }
+.revenue-controls select, .revenue-controls input { min-width: 150px; height: 42px; padding: 0 12px; border: 1px solid var(--border, #dce8df); border-radius: 10px; background: #fff; color: var(--text, #15382d); font: inherit; }
+.revenue-controls input { width: 120px; min-width: 120px; }
+.revenue-period-switch { display: flex; gap: 4px; padding: 4px; border-radius: 11px; background: #f0f6f1; }
+.revenue-period-switch button { min-height: 36px; padding: 0 16px; border: 0; border-radius: 8px; background: transparent; color: #64776d; font: inherit; font-weight: 650; cursor: pointer; }
+.revenue-period-switch button.active { background: white; color: #0d4936; box-shadow: 0 1px 5px #173b2c1c; }
+.revenue-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.revenue-summary-grid > article { position: relative; display: grid; gap: 10px; min-height: 150px; padding: 22px; }
+.revenue-summary-grid small { color: #6c7c73; font-size: 11px; font-weight: 750; letter-spacing: .1em; }
+.revenue-summary-grid strong { color: #153c2e; font-size: clamp(26px, 3vw, 34px); line-height: 1.1; }
+.revenue-summary-grid article > span:last-child { color: #718078; font-size: 13px; }
+.revenue-icon { position: absolute; top: 18px; right: 18px; display: grid; width: 42px; height: 42px; place-items: center; border-radius: 13px; background: #e7f3e9; color: #218253; }
+.revenue-transactions { min-width: 0; padding: 22px; }
+.revenue-table-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.revenue-table-heading h2 { margin: 0 0 5px; color: #173b2e; font-size: 19px; }
+.revenue-table-heading p { margin: 0; color: #748078; font-size: 13px; }
+.revenue-table-heading > span { flex: none; color: #6f7e75; font-size: 13px; }
+.revenue-table { width: 100%; border-collapse: collapse; text-align: left; }
+.revenue-table th { padding: 12px 14px; border-bottom: 1px solid #e5ece7; color: #758078; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.revenue-table td { padding: 14px; border-bottom: 1px solid #edf1ee; color: #2a483b; font-size: 13px; }
+.revenue-table td:first-child strong, .revenue-table td:first-child small { display: block; }
+.revenue-table td:first-child strong { color: #183c2e; font-size: 13px; }
+.revenue-table td:first-child small { margin-top: 4px; color: #7b8880; font-size: 12px; }
+.revenue-success-status { display: inline-flex; padding: 5px 9px; border-radius: 999px; background: #e7f4eb; color: #16804d; font-size: 10px; font-weight: 750; letter-spacing: .04em; }
+.revenue-empty { margin: 0; padding: 35px 12px; color: #758078; text-align: center; }
+.revenue-pagination { margin-top: 18px; }
+@media (max-width: 680px) {
+  .revenue-controls { align-items: stretch; }
+  .revenue-period-switch { width: 100%; }
+  .revenue-period-switch button { flex: 1; }
+  .revenue-controls > label { flex: 1; }
+  .revenue-controls select { min-width: 0; width: 100%; }
+  .revenue-summary-grid { grid-template-columns: 1fr; gap: 12px; }
+  .revenue-summary-grid > article { min-height: 130px; padding: 18px; }
+  .revenue-transactions { padding: 16px 12px; }
+  .revenue-table { min-width: 680px; }
+  .revenue-table th, .revenue-table td { padding: 12px 10px; }
+  .revenue-pagination { align-items: flex-start; gap: 12px; }
+  .revenue-pagination > div { flex-wrap: wrap; }
+}

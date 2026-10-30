@@ -77,6 +77,11 @@ public class MemberService {
                         ));
     }
 
+    public java.util.List<Member> getMembersByIds(java.util.List<Long> ids) {
+        if (ids == null || ids.size() > 100) throw new IllegalArgumentException("A maximum of 100 member IDs is allowed");
+        return memberRepository.findAllById(ids);
+    }
+
     public Member findMemberForAccountRegistration(String identifier) {
         if (identifier == null || identifier.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter the email or mobile number registered with the gym");

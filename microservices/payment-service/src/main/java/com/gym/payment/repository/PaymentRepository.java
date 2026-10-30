@@ -24,6 +24,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Long countSuccessfulPaymentsBetween(@Param("status") PaymentStatus status,
             @Param("start") Instant start, @Param("end") Instant end);
 
+    org.springframework.data.domain.Page<Payment> findByStatusAndVerifiedAtGreaterThanEqualAndVerifiedAtLessThanOrderByVerifiedAtDesc(
+            PaymentStatus status, Instant start, Instant end, org.springframework.data.domain.Pageable pageable);
+
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 
     Optional<Payment> findByRazorpayOrderId(String razorpayOrderId);

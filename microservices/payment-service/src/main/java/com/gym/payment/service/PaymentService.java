@@ -4,6 +4,9 @@ package com.gym.payment.service;
 import com.gym.payment.dto.CreatePaymentResponse;
 import com.gym.payment.dto.PaymentResponse;
 import com.gym.payment.dto.MonthlyRevenueResponse;
+import com.gym.payment.dto.RevenuePaymentItem;
+import com.gym.payment.dto.RevenueReportResponse;
+import com.gym.payment.client.MemberDirectoryClient;
 import com.gym.payment.dto.VerifyPaymentRequest;
 import com.gym.payment.entity.Payment;
 import com.gym.payment.enums.PaymentStatus;
@@ -35,17 +38,20 @@ public class PaymentService {
     private final RazorpayService razorpayService;
     private final MembershipIntegrationService membershipIntegrationService;
     private final PaymentOrderPersistenceService orderPersistenceService;
+    private final MemberDirectoryClient memberDirectoryClient;
 
     public PaymentService(
             PaymentRepository paymentRepository,
             RazorpayService razorpayService,
             MembershipIntegrationService membershipIntegrationService,
-            PaymentOrderPersistenceService orderPersistenceService
+            PaymentOrderPersistenceService orderPersistenceService,
+            MemberDirectoryClient memberDirectoryClient
     ) {
         this.paymentRepository = paymentRepository;
         this.razorpayService = razorpayService;
         this.membershipIntegrationService = membershipIntegrationService;
         this.orderPersistenceService = orderPersistenceService;
+        this.memberDirectoryClient = memberDirectoryClient;
     }
 
     // IMPORTANT: Do not add @Transactional to this method.
@@ -381,6 +387,44 @@ public class PaymentService {
         Long count = paymentRepository.countSuccessfulPaymentsBetween(PaymentStatus.SUCCESS, start, end);
         return new MonthlyRevenueResponse(month, amount == null ? 0L : amount,
                 count == null ? 0L : count, "INR");
+    }
+
+    @Transactional(readOnly = true)
+    public RevenueReportResponse getRevenueReport(String requestedPeriod, int year, Integer month,
+            int page, int size) {
+        String period = requestedPeriod == null ? "MONTHLY" : requestedPeriod.trim().toUpperCase();
+        if (!period.equals("MONTHLY") && !period.equals("YEARLY")) {
+            throw new IllegalArgumentException("Period must be MONTHLY or YEARLY");
+        }
+        if (year < 2000 || year > 9999 || page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Invalid revenue report date or pagination");
+        }
+        if (period.equals("MONTHLY") && (month == null || month < 1 || month > 12)) {
+            throw new IllegalArgumentException("A month from 1 to 12 is required for monthly reports");
+        }
+        java.time.LocalDate startDate = period.equals("MONTHLY")
+                ? java.time.LocalDate.of(year, month, 1) : java.time.LocalDate.of(year, 1, 1);
+        java.time.LocalDate endDate = period.equals("MONTHLY")
+                ? startDate.plusMonths(1) : startDate.plusYears(1);
+        java.time.Instant start = startDate.atStartOfDay(REVENUE_ZONE).toInstant();
+        java.time.Instant end = endDate.atStartOfDay(REVENUE_ZONE).toInstant();
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        var results = paymentRepository.findByStatusAndVerifiedAtGreaterThanEqualAndVerifiedAtLessThanOrderByVerifiedAtDesc(
+                PaymentStatus.SUCCESS, start, end, pageable);
+        Long total = paymentRepository.sumSuccessfulAmountBetween(PaymentStatus.SUCCESS, start, end);
+        Long count = paymentRepository.countSuccessfulPaymentsBetween(PaymentStatus.SUCCESS, start, end);
+        var profiles = memberDirectoryClient.getProfiles(results.getContent().stream()
+                .map(Payment::getMemberId).distinct().toList());
+        List<RevenuePaymentItem> items = results.getContent().stream().map(payment -> {
+            var profile = profiles.get(payment.getMemberId());
+            return new RevenuePaymentItem(payment.getId(), payment.getMemberId(),
+                    profile == null ? "Member #" + payment.getMemberId() : profile.name(),
+                    profile == null ? null : profile.email(), payment.getPlanName(),
+                    payment.getAmountPaise(), payment.getCurrency(), payment.getVerifiedAt());
+        }).toList();
+        return new RevenueReportResponse(period, year, month,
+                total == null ? 0L : total, count == null ? 0L : count, "INR",
+                page, size, results.getTotalPages(), items);
     }
 
     private void restoreLatestPaidMembership(Long memberId, String memberAccessToken, List<Payment> payments) {

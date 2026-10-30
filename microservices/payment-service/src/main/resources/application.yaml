@@ -1,6 +1,10 @@
 app:
   jwt:
     secret: ${JWT_SECRET}
+  member-service:
+    url: ${MEMBER_SERVICE_URL:http://localhost:8081}
+  internal-service:
+    key: ${INTERNAL_SERVICE_KEY:}
 
 membership:
   service:
