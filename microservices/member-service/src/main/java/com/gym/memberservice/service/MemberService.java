@@ -108,7 +108,7 @@ public class MemberService {
         }
         if (request.age() != null) existing.setAge(request.age());
         if (request.mobile() != null) existing.setMobile(request.mobile());
-        if (request.gymTime() != null) existing.setGymTime(request.gymTime());
+        // Gym time is managed by administrators, not through member self-service.
         if (request.email() != null) existing.setEmail(request.email());
         if (request.gender() != null) existing.setGender(request.gender());
         if (request.fatherName() != null) existing.setFatherName(request.fatherName());

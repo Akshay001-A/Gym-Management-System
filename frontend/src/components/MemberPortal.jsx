@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, BadgeCheck, CreditCard, Dumbbell, LogOut, RefreshCw, UserRound } from 'lucide-react'
+import { Activity, BadgeCheck, CalendarDays, Clock3, CreditCard, Dumbbell, Hash, LogOut, Mail, Phone, RefreshCw, UserRound, VenusAndMars } from 'lucide-react'
 import {
   cancelMyMembership, getMemberTrainers, getMembershipPlans,
   getMyMemberships, getMyProfile, recoverAssignedMembershipPlan, updateMyProfile,
@@ -7,8 +7,12 @@ import {
 import PaymentCenter from './PaymentCenter'
 import { getPaymentHistory } from '../api/payments'
 
-const emptyProfile = { name: '', age: '', mobile: '', gymTime: '', email: '', gender: '', fatherName: '' }
+const emptyProfile = { name: '', age: '', mobile: '', email: '', gender: '', fatherName: '' }
 const pages = { home: 'Overview', memberships: 'My Memberships', trainers: 'Trainers', payments: 'Payments', profile: 'My Profile' }
+
+function ProfileField({ icon: Icon, label, value }) {
+  return <div className="member-profile-field"><span className="member-profile-field-icon"><Icon size={17} /></span><div><dt>{label}</dt><dd>{value || '—'}</dd></div></div>
+}
 
 async function loadMembershipsWithAssignedPlan() {
   let current = await getMyMemberships()
@@ -98,7 +102,7 @@ export default function MemberPortal({ session, onLogout }) {
     try {
       const updated = await updateMyProfile({
         name: profileForm.name, age: Number(profileForm.age), mobile: profileForm.mobile,
-        gymTime: profileForm.gymTime, email: profileForm.email,
+        email: profileForm.email,
         gender: profileForm.gender, fatherName: profileForm.fatherName,
       })
       setProfile(updated)
@@ -160,12 +164,20 @@ export default function MemberPortal({ session, onLogout }) {
           {page === 'memberships' && <section className="member-panel"><div className="member-section-heading"><div><h2>My memberships</h2><p>Memberships are tied to your member profile.</p></div></div>{memberships.length ? <MembershipList items={memberships} busy={busy} onCancel={cancelMembership} onPay={payMembership} /> : <p className="member-empty">No membership records yet.</p>}</section>}
           {page === 'trainers' && <section className="member-panel"><div className="member-section-heading"><div><h2>Trainers</h2><p>Trainer directory from the Trainer Service.</p></div></div><TrainerList trainers={trainers} /></section>}
           {page === 'payments' && <PaymentCenter initialPlan={selectedPaymentPlan} session={session} onPlanConsumed={clearSelectedPaymentPlan} onMembershipUpdated={refreshMemberships} hasCurrentMembership={Boolean(currentMembership)} />}
-          {page === 'profile' && <section className="member-panel">
-            <div className="member-section-heading"><div><h2>My profile</h2><p>Update your own contact information.</p></div>{!editing && <button className="member-text-button" type="button" onClick={() => setEditing(true)}>Edit profile</button>}</div>
+          {page === 'profile' && <section className="member-panel member-profile-panel">
+            <div className="member-section-heading"><div><p className="member-profile-kicker">ACCOUNT DETAILS</p><h2>My profile</h2><p>Keep your contact details and gym preferences up to date.</p></div>{!editing && <button className="member-profile-edit-button" type="button" onClick={() => setEditing(true)}><UserRound size={16} /> Edit profile</button>}</div>
             {editing ? <form className="member-profile-form" onSubmit={saveProfile}>
-              {[['name','Full name'],['email','Email address'],['age','Age'],['mobile','Mobile'],['gymTime','Preferred gym time'],['gender','Gender'],['fatherName','Parent / guardian']].map(([key,label]) => <label key={key}>{label}<input name={key} type={key === 'email' ? 'email' : key === 'age' ? 'number' : 'text'} min={key === 'age' ? '1' : undefined} value={profileForm[key]} onChange={changeProfile} required /></label>)}
-              <div className="member-profile-actions"><button type="button" onClick={() => setEditing(false)}>Cancel</button><button type="submit" disabled={busy === 'profile'}>{busy === 'profile' ? 'Saving…' : 'Save profile'}</button></div>
-            </form> : <dl className="member-profile-list">{Object.entries({Name:profile?.name, Email:profile?.email, Age:profile?.age, Mobile:profile?.mobile, 'Gym time':profile?.gymTime, Gender:profile?.gender, 'Member ID':profile?.id}).map(([key,value]) => <div key={key}><dt>{key}</dt><dd>{value ?? '—'}</dd></div>)}</dl>}
+              <fieldset className="member-profile-edit-group"><legend>Personal information</legend><label>Full name<input name="name" value={profileForm.name} onChange={changeProfile} required /></label><label>Age<input name="age" type="number" min="1" value={profileForm.age} onChange={changeProfile} required /></label><label>Gender<input name="gender" value={profileForm.gender} onChange={changeProfile} required /></label><label>Parent / guardian<input name="fatherName" value={profileForm.fatherName} onChange={changeProfile} required /></label></fieldset>
+              <fieldset className="member-profile-edit-group"><legend>Contact information</legend><label>Email address<input name="email" type="email" value={profileForm.email} onChange={changeProfile} required /></label><label>Mobile number<input name="mobile" value={profileForm.mobile} onChange={changeProfile} required /></label></fieldset>
+              <div className="member-profile-actions"><button type="button" onClick={() => setEditing(false)}>Cancel</button><button type="submit" disabled={busy === 'profile'}>{busy === 'profile' ? 'Saving…' : 'Save changes'}</button></div>
+            </form> : <>
+              <div className="member-profile-identity"><span className="member-profile-avatar">{(profile?.name || session.name || 'M').trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span><div><strong>{profile?.name || session.name}</strong><span>Gym member</span></div><span className="member-profile-id"><Hash size={14} /> Member {profile?.id ?? session.memberId ?? '—'}</span></div>
+              <div className="member-profile-groups">
+                <section className="member-profile-group"><h3>Personal information</h3><dl><ProfileField icon={UserRound} label="Full name" value={profile?.name} /><ProfileField icon={CalendarDays} label="Age" value={profile?.age ? `${profile.age} years` : ''} /><ProfileField icon={VenusAndMars} label="Gender" value={profile?.gender} /><ProfileField icon={UserRound} label="Parent / guardian" value={profile?.fatherName} /><ProfileField icon={Hash} label="Member ID" value={profile?.id ?? session.memberId} /></dl></section>
+                <section className="member-profile-group"><h3>Contact information</h3><dl><ProfileField icon={Mail} label="Email address" value={profile?.email} /><ProfileField icon={Phone} label="Mobile number" value={profile?.mobile} /></dl></section>
+                <section className="member-profile-group"><h3>Gym preference</h3><dl><ProfileField icon={Clock3} label="Preferred gym time" value={profile?.gymTime} /></dl></section>
+              </div>
+            </>}
           </section>}
         </>}
         <footer className="member-footer">Your account role and member identity are verified by the backend.</footer>

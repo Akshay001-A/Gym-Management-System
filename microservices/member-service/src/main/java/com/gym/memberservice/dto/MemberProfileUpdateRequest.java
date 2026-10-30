@@ -14,7 +14,7 @@ public record MemberProfileUpdateRequest(
         @Size(max = 20) String gender,
         @Size(max = 100) String fatherName) {
     public boolean isEmpty() {
-        return name == null && age == null && mobile == null && gymTime == null
+        return name == null && age == null && mobile == null
                 && email == null && gender == null && fatherName == null;
     }
 }
