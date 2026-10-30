@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, BadgeCheck, CreditCard, Dumbbell, LogOut, RefreshCw, UserRound } from 'lucide-react'
 import {
   cancelMyMembership, getMemberTrainers, getMembershipPlans,
@@ -30,10 +30,19 @@ export default function MemberPortal({ session, onLogout }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
-  const [notice, setNotice] = useState('')
+  const [notice, setNoticeValue] = useState('')
+  const noticeTimer = useRef(null)
   const [editing, setEditing] = useState(false)
   const [profileForm, setProfileForm] = useState(emptyProfile)
   const clearSelectedPaymentPlan = useCallback(() => setSelectedPaymentPlan(''), [])
+
+  function setNotice(message) {
+    window.clearTimeout(noticeTimer.current)
+    setNoticeValue(message)
+    if (message) noticeTimer.current = window.setTimeout(() => setNoticeValue(''), 6000)
+  }
+
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
   const refreshMemberships = useCallback(async () => {
     setMemberships(await loadMembershipsWithAssignedPlan())
   }, [])

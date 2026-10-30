@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, Search, X } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
@@ -42,10 +42,19 @@ export default function App() {
   const [dialogError, setDialogError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
-  const [notice, setNotice] = useState('')
+  const [notice, setNoticeValue] = useState('')
+  const noticeTimer = useRef(null)
   const [mobileNav, setMobileNav] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [compactTables, setCompactTables] = useState(readCompactTablesPreference)
+
+  function setNotice(message) {
+    window.clearTimeout(noticeTimer.current)
+    setNoticeValue(message)
+    if (message) noticeTimer.current = window.setTimeout(() => setNoticeValue(''), 6000)
+  }
+
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
 
   const requestKey = page === 'Overview' ? `overview:${refreshKey}` : `members:${memberPage}:${search.trim()}:${refreshKey}`
   const membersLoading = (page === 'Overview' || page === 'Members') && loadedKey !== requestKey
