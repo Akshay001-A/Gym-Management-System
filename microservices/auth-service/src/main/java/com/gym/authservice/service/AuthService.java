@@ -436,6 +436,21 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Member profile setup is pending. Retry registration to complete it.");
         if ("MEMBER".equals(account.getRole()) && account.getMemberId()==null)
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Member account needs administrator profile-link review");
+        if ("MEMBER".equals(account.getRole())) {
+            try {
+                if (!memberServiceClient.memberProfileExists(account.getMemberId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Your gym member profile is no longer available. Please contact the administrator.");
+                }
+            } catch (ResponseStatusException exception) {
+                throw exception;
+            } catch (IllegalStateException exception) {
+                log.warn("Could not verify member profile during sign in; errorType={}",
+                        exception.getClass().getSimpleName());
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "We could not verify your gym profile right now. Please try again shortly.");
+            }
+        }
         return issueResponse(account);
     }
 

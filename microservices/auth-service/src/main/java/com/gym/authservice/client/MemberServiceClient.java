@@ -83,4 +83,20 @@ public class MemberServiceClient {
             throw new IllegalStateException("Member Service could not remove the unlinked profile", ex);
         }
     }
+
+    public boolean memberProfileExists(Long memberId) {
+        try {
+            Boolean exists = restClient.get()
+                    .uri("/api/members/internal/{id}/exists", memberId)
+                    .header("X-Internal-Service-Key", internalServiceKey)
+                    .retrieve()
+                    .body(Boolean.class);
+            if (exists == null) {
+                throw new IllegalStateException("Member Service returned no profile status");
+            }
+            return exists;
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("Member Service could not verify the profile", ex);
+        }
+    }
 }
