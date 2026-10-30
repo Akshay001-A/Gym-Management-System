@@ -53,27 +53,6 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-function latestPaidThrough(payments, planName, plans) {
-  const duration = plans.find((plan) => plan.name === planName)?.durationMonths
-  if (!Number.isInteger(duration) || duration < 1) return ''
-  const now = new Date()
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
-  const expirations = payments
-    .filter((item) => item.planName === planName && String(item.status).toUpperCase() === 'SUCCESS')
-    .map((item) => {
-      const paidAt = new Date(item.verifiedAt || item.createdAt)
-      if (Number.isNaN(paidAt.getTime())) return null
-      const day = paidAt.getUTCDate()
-      const expiration = new Date(Date.UTC(paidAt.getUTCFullYear(), paidAt.getUTCMonth() + duration, 1))
-      const lastDay = new Date(Date.UTC(expiration.getUTCFullYear(), expiration.getUTCMonth() + 1, 0)).getUTCDate()
-      expiration.setUTCDate(Math.min(day, lastDay))
-      return expiration
-    })
-    .filter((date) => date && date.getTime() >= today)
-    .sort((a, b) => b - a)[0]
-  return expirations ? expirations.toISOString().slice(0, 10) : ''
-}
-
 function StatusBadge({ status }) {
   const normalized = String(status || 'UNKNOWN').toUpperCase()
   return <span className={`payment-status payment-status-${normalized.toLowerCase()}`}>{normalized.replaceAll('_', ' ')}</span>
@@ -84,7 +63,6 @@ export default function PaymentCenter({ initialPlan = '', session, onPlanConsume
   const [plans, setPlans] = useState([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [plansError, setPlansError] = useState('')
-  const [verifiedPayments, setVerifiedPayments] = useState([])
   const [planReload, setPlanReload] = useState(0)
   const [selectedPlan, setSelectedPlan] = useState(initialPlan)
   const [order, setOrder] = useState(null)
@@ -115,16 +93,6 @@ export default function PaymentCenter({ initialPlan = '', session, onPlanConsume
       .finally(() => { if (!controller.signal.aborted) setPlansLoading(false) })
     return () => controller.abort()
   }, [planReload])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    getPaymentHistory({ page: 0, size: 100, signal: controller.signal })
-      .then((data) => { if (!controller.signal.aborted) setVerifiedPayments(data.content || []) })
-      .catch(() => { /* The backend still enforces duplicate payment protection. */ })
-    return () => controller.abort()
-  }, [])
-
-  const paidThrough = selectedPlan ? latestPaidThrough(verifiedPayments, selectedPlan, plans) : null
 
   function resetCheckout() {
     setPayment(null)
@@ -306,10 +274,9 @@ export default function PaymentCenter({ initialPlan = '', session, onPlanConsume
           <span className="payment-plan-check"><BadgeCheck size={18} /></span><span className="payment-plan-name">{plan.name}</span><strong>{formatAmount(Number(plan.price) * 100)}</strong><small>{plan.durationMonths} month{plan.durationMonths === 1 ? '' : 's'}</small>
         </button>)}
       </div>}
-      {selectedPlan && paidThrough && <div className="member-error payment-already-paid" role="status">You already paid for this {selectedPlan.toLowerCase()} plan. Your access is covered through {paidThrough}. You can pay for it again after that date.</div>}
       {selectedPlan && <div className="payment-confirm-card">
         <div><span>Selected plan</span><strong>{selectedPlan}</strong><small>Plan price is supplied by the Membership Service. The payment amount is calculated again by the backend.</small></div>
-        <button type="button" className="member-payment-primary" disabled={hasCurrentMembership || plansLoading || checkoutBusy || Boolean(paidThrough) || !plans.some((plan) => plan.name === selectedPlan)} onClick={beginPayment}>{hasCurrentMembership ? 'Plan already active' : paidThrough ? 'Already paid' : checkoutBusy ? 'Preparing…' : 'Proceed to payment'}<CreditCard size={16} /></button>
+        <button type="button" className="member-payment-primary" disabled={hasCurrentMembership || plansLoading || checkoutBusy || !plans.some((plan) => plan.name === selectedPlan)} onClick={beginPayment}>{hasCurrentMembership ? 'Plan already active' : checkoutBusy ? 'Preparing…' : 'Proceed to payment'}<CreditCard size={16} /></button>
       </div>}
       {order && !checkoutBusy && <div className="payment-retry-card"><span>Order #{order.paymentId} is ready. Reopen Checkout without creating another order.</span><button type="button" onClick={() => openCheckout(order)}>Open Checkout</button></div>}
       <p className="payment-security-note"><ShieldCheck size={15} />Payment confirmation is verified by the server. Your Razorpay secret is never sent to this page.</p>

@@ -112,26 +112,6 @@ public class PaymentService {
                         memberAccessToken
                 );
 
-        int durationMonths = membershipIntegrationService
-                .getPlanDurationMonths(planName, memberAccessToken);
-        paymentRepository
-                .findFirstByMemberIdAndPlanNameAndStatusAndVerifiedAtNotNullOrderByVerifiedAtDesc(
-                        memberId,
-                        planName,
-                        PaymentStatus.SUCCESS
-                )
-                .map(Payment::getVerifiedAt)
-                .map(verifiedAt -> verifiedAt.atZone(ZoneOffset.UTC)
-                        .toLocalDate().plusMonths(durationMonths))
-                .filter(validThrough -> !LocalDate.now(ZoneOffset.UTC)
-                        .isAfter(validThrough))
-                .ifPresent(validThrough -> {
-                    throw new IllegalStateException(
-                            "You already paid for this plan. Your access is covered through "
-                                    + validThrough + "."
-                    );
-                });
-
         if (amountPaise < 100) {
             throw new IllegalArgumentException(
                     "The membership plan has an invalid payment amount"
