@@ -35,7 +35,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [searchMatches, setSearchMatches] = useState(null)
   const [searchTotal, setSearchTotal] = useState(0)
-  const [overviewCounts, setOverviewCounts] = useState({ membershipCount: null, trainerCount: null, membershipUnavailable: false, trainerUnavailable: false })
+  const [overviewCounts, setOverviewCounts] = useState({ membershipCount: null, trainerCount: null, membershipUnavailable: false, trainerUnavailable: false, monthlyRevenue: null, revenueUnavailable: false })
   const [dialog, setDialog] = useState(null)
   const [dialogSaving, setDialogSaving] = useState(false)
   const [dialogError, setDialogError] = useState('')
@@ -60,8 +60,8 @@ export default function App() {
         .catch((error) => { if (error.name !== 'AbortError') setMembersError(error.message) })
         .finally(() => { if (!controller.signal.aborted) setLoadedKey(requestKey) })
       getOverviewCounts({ signal: controller.signal })
-        .then((result) => setOverviewCounts({ membershipCount: result.activeMemberships, trainerCount: result.trainerCount, membershipUnavailable: result.membershipUnavailable, trainerUnavailable: result.trainerUnavailable }))
-        .catch(() => { if (!controller.signal.aborted) setOverviewCounts({ membershipCount: null, trainerCount: null, membershipUnavailable: true, trainerUnavailable: true }) })
+        .then((result) => setOverviewCounts({ membershipCount: result.activeMemberships, trainerCount: result.trainerCount, membershipUnavailable: result.membershipUnavailable, trainerUnavailable: result.trainerUnavailable, monthlyRevenue: result.monthlyRevenue, revenueUnavailable: result.revenueUnavailable }))
+        .catch(() => { if (!controller.signal.aborted) setOverviewCounts((current) => ({ ...current, monthlyRevenue: null, revenueUnavailable: true })) })
       return () => controller.abort()
     }
 
@@ -105,7 +105,7 @@ export default function App() {
     if (label === 'Overview') {
       setMembers([])
       setMemberCount(null)
-      setOverviewCounts({ membershipCount: null, trainerCount: null, membershipUnavailable: false, trainerUnavailable: false })
+      setOverviewCounts({ membershipCount: null, trainerCount: null, membershipUnavailable: false, trainerUnavailable: false, monthlyRevenue: null, revenueUnavailable: false })
     }
     setMobileNav(false)
   }
@@ -210,6 +210,8 @@ export default function App() {
           membershipUnavailable={overviewCounts.membershipUnavailable}
           trainerCount={overviewCounts.trainerCount}
           trainerUnavailable={overviewCounts.trainerUnavailable}
+          monthlyRevenue={overviewCounts.monthlyRevenue}
+          revenueUnavailable={overviewCounts.revenueUnavailable}
           onRetry={() => setRefreshKey((key) => key + 1)}
           navigate={navigate}
         />}

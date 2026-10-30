@@ -9,7 +9,9 @@ import {
 import Metric from "./Metric";
 import MemberTable from "./MemberTable";
 
-export default function Dashboard({ members, memberCount, membersLoading, membersError, membershipCount, membershipUnavailable, trainerCount, trainerUnavailable, onRetry, navigate }) {
+export default function Dashboard({ members, memberCount, membersLoading, membersError, membershipCount, membershipUnavailable, trainerCount, trainerUnavailable, monthlyRevenue, revenueUnavailable, onRetry, navigate }) {
+  const revenueValue = monthlyRevenue ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: monthlyRevenue.currency || 'INR', maximumFractionDigits: 2 }).format(Number(monthlyRevenue.amountPaise || 0) / 100) : '—'
+  const revenueNote = revenueUnavailable ? 'Payment data unavailable' : monthlyRevenue ? `${monthlyRevenue.successfulPaymentCount} successful payments this month` : 'Loading payment data'
   return (
     <div className="page-content">
       {/* Welcome banner */}
@@ -61,9 +63,9 @@ export default function Dashboard({ members, memberCount, membersLoading, member
 
         <Metric
           label="Monthly revenue"
-          value="—"
+          value={revenueValue}
           icon={Activity}
-          note="Payment data not connected"
+          note={revenueNote}
         />
       </section>
 

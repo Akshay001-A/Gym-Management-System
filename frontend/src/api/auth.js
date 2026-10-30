@@ -22,3 +22,11 @@ export async function completeMemberRegistration(identifier, code, password) {
   })
   return saveSession(session)
 }
+
+export function requestPasswordResetCode(email) {
+  return apiRequest('/auth/password/request-code', { method: 'POST', body: { email } })
+}
+
+export function completePasswordReset(email, code, password) {
+  return apiRequest('/auth/password/reset', { method: 'POST', body: { email, code, password } })
+}

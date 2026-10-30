@@ -6,6 +6,8 @@ import com.gym.authservice.dto.LoginRequest;
 import com.gym.authservice.dto.RegistrationCodeRequest;
 import com.gym.authservice.dto.CompleteMemberRegistrationRequest;
 import com.gym.authservice.dto.RegistrationCodeResponse;
+import com.gym.authservice.dto.PasswordResetCodeRequest;
+import com.gym.authservice.dto.CompletePasswordResetRequest;
 import com.gym.authservice.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -36,6 +38,18 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 authService.completeMemberRegistration(
                         request.identifier(), request.code(), request.password()));
+    }
+
+    @PostMapping("/password/request-code")
+    public ResponseEntity<RegistrationCodeResponse> requestPasswordResetCode(
+            @Valid @RequestBody PasswordResetCodeRequest request) {
+        return ResponseEntity.ok(authService.requestPasswordResetCode(request.email()));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody CompletePasswordResetRequest request) {
+        authService.completePasswordReset(request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/register")

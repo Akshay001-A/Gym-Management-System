@@ -3,6 +3,7 @@ package com.gym.payment.service;
 
 import com.gym.payment.dto.CreatePaymentResponse;
 import com.gym.payment.dto.PaymentResponse;
+import com.gym.payment.dto.MonthlyRevenueResponse;
 import com.gym.payment.dto.VerifyPaymentRequest;
 import com.gym.payment.entity.Payment;
 import com.gym.payment.enums.PaymentStatus;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +29,7 @@ import org.slf4j.LoggerFactory;
 @Service
 public class PaymentService {
     private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
+    private static final ZoneId REVENUE_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final PaymentRepository paymentRepository;
     private final RazorpayService razorpayService;
@@ -366,6 +370,17 @@ public class PaymentService {
         restoreLatestPaidMembership(memberId, memberAccessToken, history.getContent());
         return paymentRepository.findByMemberIdOrderByCreatedAtDesc(memberId, pageable)
                 .map(this::toPaymentResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlyRevenueResponse getCurrentMonthRevenue() {
+        YearMonth month = YearMonth.now(REVENUE_ZONE);
+        java.time.Instant start = month.atDay(1).atStartOfDay(REVENUE_ZONE).toInstant();
+        java.time.Instant end = month.plusMonths(1).atDay(1).atStartOfDay(REVENUE_ZONE).toInstant();
+        Long amount = paymentRepository.sumSuccessfulAmountBetween(PaymentStatus.SUCCESS, start, end);
+        Long count = paymentRepository.countSuccessfulPaymentsBetween(PaymentStatus.SUCCESS, start, end);
+        return new MonthlyRevenueResponse(month, amount == null ? 0L : amount,
+                count == null ? 0L : count, "INR");
     }
 
     private void restoreLatestPaidMembership(Long memberId, String memberAccessToken, List<Payment> payments) {

@@ -7,9 +7,10 @@ function todayAsDate() {
 }
 
 export async function getOverviewCounts({ signal } = {}) {
-  const [memberships, trainers] = await Promise.allSettled([
+  const [memberships, trainers, revenue] = await Promise.allSettled([
     apiRequest('/memberships', { signal }),
     apiRequest('/trainers', { signal }),
+    apiRequest('/payments/admin/revenue/monthly', { signal }),
   ])
 
   let activeMemberships = null
@@ -37,5 +38,7 @@ export async function getOverviewCounts({ signal } = {}) {
     trainerCount,
     membershipUnavailable: memberships.status === 'rejected',
     trainerUnavailable: trainers.status === 'rejected',
+    monthlyRevenue: revenue.status === 'fulfilled' ? revenue.value : null,
+    revenueUnavailable: revenue.status === 'rejected',
   }
 }

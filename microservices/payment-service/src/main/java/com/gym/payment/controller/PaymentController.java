@@ -3,6 +3,7 @@ package com.gym.payment.controller;
 import com.gym.payment.dto.CreatePaymentRequest;
 import com.gym.payment.dto.CreatePaymentResponse;
 import com.gym.payment.dto.PaymentResponse;
+import com.gym.payment.dto.MonthlyRevenueResponse;
 import com.gym.payment.dto.VerifyPaymentRequest;
 import com.gym.payment.service.PaymentService;
 import jakarta.validation.Valid;
@@ -22,6 +23,11 @@ public class PaymentController {
 
     public PaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
+    }
+
+    @GetMapping("/admin/revenue/monthly")
+    public ResponseEntity<MonthlyRevenueResponse> getMonthlyRevenue() {
+        return ResponseEntity.ok(paymentService.getCurrentMonthRevenue());
     }
 
     /**

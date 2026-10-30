@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/memberships/health","/actuator/health","/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/payments/health").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/payments/webhooks/razorpay").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/payments/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/payments/**").hasRole("MEMBER")
                         .requestMatchers(HttpMethod.GET,"/api/members/me").hasRole("MEMBER")
                         .requestMatchers(HttpMethod.PATCH,"/api/members/me").hasRole("MEMBER")

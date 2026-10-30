@@ -15,6 +15,9 @@
 .auth-submit{width:100%;min-height:46px;display:flex;align-items:center;justify-content:center;gap:9px;margin-top:4px;color:#fff;background:#247951;border:0;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer}
 .auth-submit:hover{background:#164b36}.auth-submit:disabled{opacity:.65;cursor:wait}
 .auth-error{margin:0;padding:11px 12px;color:#9c2f2f;background:#fff1f0;border:1px solid #f0d0cd;border-radius:9px;font-size:13px}
+.auth-success{margin:0;padding:11px 12px;color:#17633f;background:#edf8f1;border:1px solid #cee8d6;border-radius:9px;font-size:13px}
+.auth-link-button{display:block;margin:14px auto 0;padding:4px 8px;color:#247951;background:none;border:0;font-size:13px;font-weight:700;cursor:pointer}
+.auth-link-button:hover{text-decoration:underline;color:#164b36}
 .auth-footnote{display:flex;gap:8px;margin-top:21px;color:#718278;font-size:11px;line-height:1.5}.auth-footnote svg{flex:none;color:#247951}
 .auth-admin-note{margin:13px 0 0;padding-top:13px;color:#718278;border-top:1px solid #edf1ed;font-size:11px;line-height:1.5}
 @media(max-width:520px){.auth-screen{padding:14px;background-attachment:scroll}.auth-card{padding:24px 20px;border-radius:17px}.auth-form-row{grid-template-columns:1fr}}

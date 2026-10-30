@@ -118,6 +118,8 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/payments/webhooks/razorpay"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/admin/**")
+                        .hasRole("ADMIN")
                         .requestMatchers("/api/payments/**")
                         .hasRole("MEMBER")
                         .anyRequest().authenticated()

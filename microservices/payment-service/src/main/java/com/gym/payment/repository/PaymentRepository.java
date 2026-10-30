@@ -12,8 +12,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.time.Instant;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
+
+    @Query("SELECT COALESCE(SUM(p.amountPaise), 0) FROM Payment p WHERE p.status = :status AND p.verifiedAt >= :start AND p.verifiedAt < :end")
+    Long sumSuccessfulAmountBetween(@Param("status") PaymentStatus status,
+            @Param("start") Instant start, @Param("end") Instant end);
+
+    @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = :status AND p.verifiedAt >= :start AND p.verifiedAt < :end")
+    Long countSuccessfulPaymentsBetween(@Param("status") PaymentStatus status,
+            @Param("start") Instant start, @Param("end") Instant end);
 
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 
