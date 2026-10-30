@@ -9,7 +9,9 @@ import com.gym.authservice.dto.RegistrationCodeResponse;
 import com.gym.authservice.entity.Account;
 import com.gym.authservice.entity.MemberRegistrationChallenge;
 import com.gym.authservice.entity.PasswordResetChallenge;
+import com.gym.authservice.entity.EmailChangeChallenge;
 import com.gym.authservice.repository.AccountRepository;
+import com.gym.authservice.repository.EmailChangeChallengeRepository;
 import com.gym.authservice.repository.MemberRegistrationChallengeRepository;
 import com.gym.authservice.repository.PasswordResetChallengeRepository;
 import org.springframework.beans.factory.ObjectProvider;
@@ -27,7 +29,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -40,6 +44,7 @@ public class AuthService {
     private final MemberServiceClient memberServiceClient;
     private final MemberRegistrationChallengeRepository challengeRepository;
     private final PasswordResetChallengeRepository passwordResetChallengeRepository;
+    private final EmailChangeChallengeRepository emailChangeChallengeRepository;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final String mailHost;
     private final String mailFrom;
@@ -51,6 +56,7 @@ public class AuthService {
             JwtService jwtService, MemberServiceClient memberServiceClient,
             MemberRegistrationChallengeRepository challengeRepository,
             PasswordResetChallengeRepository passwordResetChallengeRepository,
+            EmailChangeChallengeRepository emailChangeChallengeRepository,
             ObjectProvider<JavaMailSender> mailSenderProvider,
             @Value("${spring.mail.host:}") String mailHost,
             @Value("${app.registration.code-from:}") String mailFrom,
@@ -59,6 +65,7 @@ public class AuthService {
         this.jwtService=jwtService; this.memberServiceClient=memberServiceClient;
         this.challengeRepository=challengeRepository; this.mailSenderProvider=mailSenderProvider;
         this.passwordResetChallengeRepository=passwordResetChallengeRepository;
+        this.emailChangeChallengeRepository=emailChangeChallengeRepository;
         this.mailHost=mailHost; this.mailFrom=mailFrom; this.codeExpirationMinutes=codeExpirationMinutes;
     }
 
@@ -68,7 +75,135 @@ public class AuthService {
             ObjectProvider<JavaMailSender> mailSenderProvider, String mailHost, String mailFrom,
             int codeExpirationMinutes) {
         this(accountRepository, passwordEncoder, jwtService, memberServiceClient, challengeRepository,
-                null, mailSenderProvider, mailHost, mailFrom, codeExpirationMinutes);
+                null, null, mailSenderProvider, mailHost, mailFrom, codeExpirationMinutes);
+    }
+
+    public RegistrationCodeResponse requestEmailChangeCode(Jwt jwt, String rawNewEmail) {
+        Account account = requireMemberAccount(jwt);
+        String newEmail = rawNewEmail.trim().toLowerCase(Locale.ROOT);
+        if (newEmail.equalsIgnoreCase(account.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a different email address.");
+        }
+        if (accountRepository.existsByEmailIgnoreCase(newEmail)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That email is already used by another account.");
+        }
+        try {
+            MemberRegistrationMatch existingMember = memberServiceClient.findMemberForRegistration(newEmail);
+            if (!account.getMemberId().equals(existingMember.id())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "That email is already linked to another gym member.");
+            }
+        } catch (IllegalStateException exception) {
+            if (downstreamStatus(exception) != 404) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "We could not check whether that email is available. Please try again.");
+            }
+        }
+        if (emailChangeChallengeRepository == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Email change verification is unavailable.");
+        }
+        if (mailHost == null || mailHost.isBlank() || mailFrom == null || mailFrom.isBlank()
+                || mailSenderProvider.getIfAvailable() == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Email verification is not configured yet. Contact the gym administrator.");
+        }
+        Instant now = Instant.now();
+        EmailChangeChallenge previous = emailChangeChallengeRepository.findById(account.getId()).orElse(null);
+        if (previous != null && previous.getCreatedAt().isAfter(now.minusSeconds(60))) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Please wait one minute before requesting another verification code.");
+        }
+        String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(mailFrom);
+            message.setTo(newEmail);
+            message.setSubject("Form & Fit email change verification");
+            message.setText("Your Form & Fit email change code is " + code
+                    + ". It expires in " + codeExpirationMinutes
+                    + " minutes. If you did not request this, ignore this email.");
+            mailSenderProvider.getObject().send(message);
+        } catch (RuntimeException exception) {
+            Throwable rootCause = exception;
+            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) rootCause = rootCause.getCause();
+            log.warn("Could not send email change verification; mailError={}, rootCause={}",
+                    exception.getClass().getSimpleName(), rootCause.getClass().getSimpleName());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "We could not send the verification email. Please try again later.");
+        }
+        emailChangeChallengeRepository.save(new EmailChangeChallenge(account.getId(), newEmail,
+                passwordEncoder.encode(code), now.plus(Duration.ofMinutes(codeExpirationMinutes))));
+        return new RegistrationCodeResponse(maskEmail(newEmail), "A verification code was sent to your new email address.");
+    }
+
+    @Transactional
+    public AuthResponse completeEmailChange(Jwt jwt, String rawNewEmail, String code) {
+        Account account = requireMemberAccount(jwt);
+        String newEmail = rawNewEmail.trim().toLowerCase(Locale.ROOT);
+        if (newEmail.equalsIgnoreCase(account.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a different email address.");
+        }
+        EmailChangeChallenge challenge = emailChangeChallengeRepository.findById(account.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Request an email verification code before changing your email."));
+        if (!challenge.getNewEmail().equalsIgnoreCase(newEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The code was sent for a different email. Request a new code.");
+        }
+        if (challenge.getExpiresAt().isBefore(Instant.now())) {
+            emailChangeChallengeRepository.delete(challenge);
+            throw new ResponseStatusException(HttpStatus.GONE, "The verification code expired. Request a new code.");
+        }
+        if (challenge.getAttempts() >= 5) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many incorrect codes. Request a new verification code.");
+        }
+        if (!passwordEncoder.matches(code, challenge.getCodeHash())) {
+            challenge.setAttempts(challenge.getAttempts() + 1);
+            emailChangeChallengeRepository.save(challenge);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That verification code is incorrect. Check the email and try again.");
+        }
+        if (accountRepository.existsByEmailIgnoreCase(newEmail)) {
+            emailChangeChallengeRepository.delete(challenge);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That email is already used by another account.");
+        }
+
+        try {
+            account.setEmail(newEmail);
+            accountRepository.saveAndFlush(account);
+            memberServiceClient.replaceMemberEmail(account.getMemberId(), newEmail);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "That email is already used by another account.");
+        } catch (IllegalStateException exception) {
+            if (exception.getCause() instanceof RestClientResponseException response
+                    && response.getStatusCode().value() == 409) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "That email is already linked to another gym member.");
+            }
+            log.warn("Could not synchronize verified member email; errorType={}", exception.getClass().getSimpleName());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "We could not update the gym profile email. Please try again later.");
+        }
+        emailChangeChallengeRepository.delete(challenge);
+        return issueResponse(account);
+    }
+
+    private Account requireMemberAccount(Jwt jwt) {
+        if (jwt == null || !"MEMBER".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in as a member to change your email.");
+        }
+        Object accountId = jwt.getClaim("accountId");
+        if (!(accountId instanceof Number id) || id.longValue() <= 0) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your member session is invalid. Sign in again.");
+        }
+        Account account = accountRepository.findById(id.longValue())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your member session is no longer valid."));
+        if (!"MEMBER".equals(account.getRole()) || account.getMemberId() == null
+                || !account.getEmail().equalsIgnoreCase(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your member session is no longer valid. Sign in again.");
+        }
+        return account;
     }
 
     public RegistrationCodeResponse requestMemberRegistrationCode(String identifier) {

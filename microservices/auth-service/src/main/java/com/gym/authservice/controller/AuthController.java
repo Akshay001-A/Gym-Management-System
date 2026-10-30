@@ -8,6 +8,8 @@ import com.gym.authservice.dto.CompleteMemberRegistrationRequest;
 import com.gym.authservice.dto.RegistrationCodeResponse;
 import com.gym.authservice.dto.PasswordResetCodeRequest;
 import com.gym.authservice.dto.CompletePasswordResetRequest;
+import com.gym.authservice.dto.EmailChangeCodeRequest;
+import com.gym.authservice.dto.CompleteEmailChangeRequest;
 import com.gym.authservice.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -15,6 +17,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -50,6 +54,20 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody CompletePasswordResetRequest request) {
         authService.completePasswordReset(request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/email/change/request-code")
+    public ResponseEntity<RegistrationCodeResponse> requestEmailChangeCode(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody EmailChangeCodeRequest request) {
+        return ResponseEntity.ok(authService.requestEmailChangeCode(jwt, request.newEmail()));
+    }
+
+    @PostMapping("/email/change/complete")
+    public ResponseEntity<AuthResponse> completeEmailChange(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CompleteEmailChangeRequest request) {
+        return ResponseEntity.ok(authService.completeEmailChange(jwt, request.newEmail(), request.code()));
     }
 
     @PostMapping("/register")

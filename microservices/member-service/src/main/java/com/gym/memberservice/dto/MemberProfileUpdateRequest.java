@@ -15,6 +15,6 @@ public record MemberProfileUpdateRequest(
         @Size(max = 100) String fatherName) {
     public boolean isEmpty() {
         return name == null && age == null && mobile == null
-                && email == null && gender == null && fatherName == null;
+                && gender == null && fatherName == null;
     }
 }

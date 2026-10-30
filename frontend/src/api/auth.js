@@ -30,3 +30,15 @@ export function requestPasswordResetCode(email) {
 export function completePasswordReset(email, code, password) {
   return apiRequest('/auth/password/reset', { method: 'POST', body: { email, code, password } })
 }
+
+export function requestMemberEmailChangeCode(newEmail) {
+  return apiRequest('/auth/email/change/request-code', { method: 'POST', body: { newEmail } })
+}
+
+export async function completeMemberEmailChange(newEmail, code) {
+  const session = await apiRequest('/auth/email/change/complete', {
+    method: 'POST',
+    body: { newEmail, code },
+  })
+  return saveSession(session)
+}

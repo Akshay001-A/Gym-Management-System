@@ -7,6 +7,7 @@ import com.gym.memberservice.dto.MemberRegistrationRequest;
 import com.gym.memberservice.dto.MemberResponse;
 import com.gym.memberservice.dto.MemberRegistrationMatch;
 import com.gym.memberservice.dto.MemberBatchRequest;
+import com.gym.memberservice.dto.MemberEmailReplacementRequest;
 import com.gym.memberservice.exception.MemberNotFoundException;
 import com.gym.memberservice.service.MemberService;
 import jakarta.validation.Valid;
@@ -97,6 +98,16 @@ public class MemberController {
             @Valid @RequestBody MemberBatchRequest request) {
         requireInternalKey(key);
         return memberService.getMembersByIds(request.memberIds()).stream().map(MemberResponse::from).toList();
+    }
+
+    @PatchMapping("/internal/{id}/email")
+    @PreAuthorize("hasRole('INTERNAL_SERVICE')")
+    public MemberResponse replaceMemberEmailInternal(
+            @RequestHeader(value = "X-Internal-Service-Key", required = false) String key,
+            @PathVariable Long id,
+            @Valid @RequestBody MemberEmailReplacementRequest request) {
+        requireInternalKey(key);
+        return MemberResponse.from(memberService.replaceMemberEmail(id, request.email()));
     }
 
     @GetMapping("/me")

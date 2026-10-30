@@ -3,6 +3,7 @@ package com.gym.authservice.client;
 import com.gym.authservice.dto.MemberProfileRequest;
 import com.gym.authservice.dto.MemberProfileResponse;
 import com.gym.authservice.dto.MemberRegistrationMatch;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -55,6 +56,19 @@ public class MemberServiceClient {
             return response;
         } catch (RestClientException ex) {
             throw new IllegalStateException("Member Service could not verify the registered profile", ex);
+        }
+    }
+
+    public void replaceMemberEmail(Long memberId, String email) {
+        try {
+            restClient.patch()
+                    .uri("/api/members/internal/{id}/email", memberId)
+                    .header("X-Internal-Service-Key", internalServiceKey)
+                    .body(Map.of("email", email))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("Member Service could not update the verified email", ex);
         }
     }
 

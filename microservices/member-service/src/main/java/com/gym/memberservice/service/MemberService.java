@@ -101,7 +101,7 @@ public class MemberService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one profile field must be supplied");
         }
         Member existing = getMemberById(id);
-        validateUniqueContactDetails(id, request.email(), request.mobile());
+        validateUniqueContactDetails(id, null, request.mobile());
         if (request.name() != null) {
             if (request.name().isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot be blank");
             existing.setName(request.name());
@@ -109,10 +109,18 @@ public class MemberService {
         if (request.age() != null) existing.setAge(request.age());
         if (request.mobile() != null) existing.setMobile(request.mobile());
         // Gym time is managed by administrators, not through member self-service.
-        if (request.email() != null) existing.setEmail(request.email());
+        // Email changes must use the verified Auth Service flow.
         if (request.gender() != null) existing.setGender(request.gender());
         if (request.fatherName() != null) existing.setFatherName(request.fatherName());
         return memberRepository.save(existing);
+    }
+
+    public Member replaceMemberEmail(Long id, String email) {
+        Member existing = getMemberById(id);
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
+        validateUniqueContactDetails(id, normalizedEmail, null);
+        existing.setEmail(normalizedEmail);
+        return memberRepository.saveAndFlush(existing);
     }
 
     // Update an existing member

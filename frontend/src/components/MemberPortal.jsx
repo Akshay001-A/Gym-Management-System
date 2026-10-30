@@ -6,6 +6,7 @@ import {
 } from '../api/member'
 import PaymentCenter from './PaymentCenter'
 import { getPaymentHistory } from '../api/payments'
+import { completeMemberEmailChange, requestMemberEmailChangeCode } from '../api/auth'
 
 const emptyProfile = { name: '', age: '', mobile: '', email: '', gender: '', fatherName: '' }
 const pages = { home: 'Overview', memberships: 'My Memberships', trainers: 'Trainers', payments: 'Payments', profile: 'My Profile' }
@@ -23,7 +24,7 @@ async function loadMembershipsWithAssignedPlan() {
   return current
 }
 
-export default function MemberPortal({ session, onLogout }) {
+export default function MemberPortal({ session, onLogout, onSessionUpdated }) {
   const [page, setPage] = useState('home')
   const [profile, setProfile] = useState(null)
   const [memberships, setMemberships] = useState([])
@@ -38,6 +39,12 @@ export default function MemberPortal({ session, onLogout }) {
   const noticeTimer = useRef(null)
   const [editing, setEditing] = useState(false)
   const [profileForm, setProfileForm] = useState(emptyProfile)
+  const [emailChangeStep, setEmailChangeStep] = useState('idle')
+  const [pendingProfileChanges, setPendingProfileChanges] = useState(null)
+  const [emailCode, setEmailCode] = useState('')
+  const [emailChangeHint, setEmailChangeHint] = useState('')
+  const [emailChangeError, setEmailChangeError] = useState('')
+  const [emailChangeBusy, setEmailChangeBusy] = useState(false)
   const clearSelectedPaymentPlan = useCallback(() => setSelectedPaymentPlan(''), [])
 
   function setNotice(message) {
@@ -98,11 +105,30 @@ export default function MemberPortal({ session, onLogout }) {
 
   async function saveProfile(event) {
     event.preventDefault()
+    if (emailChangeStep === 'code') {
+      await finishProfileEmailChange(event)
+      return
+    }
+    const changedEmail = profileForm.email.trim().toLowerCase() !== String(profile?.email || '').trim().toLowerCase()
+    if (changedEmail) {
+      setEmailChangeBusy(true)
+      setEmailChangeError('')
+      try {
+        const result = await requestMemberEmailChangeCode(profileForm.email.trim())
+        setEmailChangeHint(result.maskedEmail || profileForm.email.trim())
+        setPendingProfileChanges({
+          name: profileForm.name, age: Number(profileForm.age), mobile: profileForm.mobile,
+          gender: profileForm.gender, fatherName: profileForm.fatherName,
+        })
+        setEmailChangeStep('code')
+      } catch (requestError) { setEmailChangeError(requestError.message) }
+      finally { setEmailChangeBusy(false) }
+      return
+    }
     setBusy('profile')
     try {
       const updated = await updateMyProfile({
         name: profileForm.name, age: Number(profileForm.age), mobile: profileForm.mobile,
-        email: profileForm.email,
         gender: profileForm.gender, fatherName: profileForm.fatherName,
       })
       setProfile(updated)
@@ -110,6 +136,46 @@ export default function MemberPortal({ session, onLogout }) {
       setNotice('Profile updated.')
     } catch (requestError) { setNotice(requestError.message) }
     finally { setBusy('') }
+  }
+
+  async function finishProfileEmailChange(event) {
+    event.preventDefault()
+    setEmailChangeBusy(true)
+    setEmailChangeError('')
+    try {
+      const updatedSession = await completeMemberEmailChange(profileForm.email.trim(), emailCode.trim())
+      onSessionUpdated?.(updatedSession)
+      const verifiedEmail = profileForm.email.trim().toLowerCase()
+      setProfile((current) => current ? { ...current, email: verifiedEmail } : current)
+      setProfileForm((current) => ({ ...current, email: verifiedEmail }))
+      setEmailChangeStep('idle')
+      setEmailCode('')
+      setEmailChangeHint('')
+      try {
+        const updated = await updateMyProfile(pendingProfileChanges)
+        setProfile(updated)
+        setProfileForm(Object.fromEntries(Object.keys(emptyProfile).map((key) => [key, updated[key] ?? ''])))
+        setEditing(false)
+        setPendingProfileChanges(null)
+        setNotice('Profile and sign-in email updated. Use the new email and your existing password next time you sign in.')
+      } catch (profileError) {
+        setPendingProfileChanges(null)
+        setEmailChangeError(`Your sign-in email is verified and updated, but the other profile details could not be saved: ${profileError.message} Save changes again to retry them.`)
+      }
+    } catch (requestError) {
+      setEmailChangeError(requestError.message)
+    } finally {
+      setEmailChangeBusy(false)
+    }
+  }
+
+  function cancelEmailChange() {
+    setEmailChangeStep('idle')
+    setPendingProfileChanges(null)
+    setEmailCode('')
+    setEmailChangeHint('')
+    setEmailChangeError('')
+    setProfileForm((current) => ({ ...current, email: profile?.email || '' }))
   }
 
   function changeProfile(event) {
@@ -168,8 +234,8 @@ export default function MemberPortal({ session, onLogout }) {
             <div className="member-section-heading"><div><p className="member-profile-kicker">ACCOUNT DETAILS</p><h2>My profile</h2><p>Keep your contact details and gym preferences up to date.</p></div>{!editing && <button className="member-profile-edit-button" type="button" onClick={() => setEditing(true)}><UserRound size={16} /> Edit profile</button>}</div>
             {editing ? <form className="member-profile-form" onSubmit={saveProfile}>
               <fieldset className="member-profile-edit-group"><legend>Personal information</legend><label>Full name<input name="name" value={profileForm.name} onChange={changeProfile} required /></label><label>Age<input name="age" type="number" min="1" value={profileForm.age} onChange={changeProfile} required /></label><label>Gender<input name="gender" value={profileForm.gender} onChange={changeProfile} required /></label><label>Parent / guardian<input name="fatherName" value={profileForm.fatherName} onChange={changeProfile} required /></label></fieldset>
-              <fieldset className="member-profile-edit-group"><legend>Contact information</legend><label>Email address<input name="email" type="email" value={profileForm.email} onChange={changeProfile} required /></label><label>Mobile number<input name="mobile" value={profileForm.mobile} onChange={changeProfile} required /></label></fieldset>
-              <div className="member-profile-actions"><button type="button" onClick={() => setEditing(false)}>Cancel</button><button type="submit" disabled={busy === 'profile'}>{busy === 'profile' ? 'Saving…' : 'Save changes'}</button></div>
+              <fieldset className="member-profile-edit-group"><legend>Contact information</legend><label>Email address<input name="email" type="email" autoComplete="email" value={profileForm.email} onChange={changeProfile} required disabled={emailChangeStep === 'code'} /></label><label>Mobile number<input name="mobile" value={profileForm.mobile} onChange={changeProfile} required /></label>{emailChangeStep === 'code' && <><p className="member-email-profile-help">Enter the one-time code sent to {emailChangeHint}. Your email and profile will update after the code is verified.</p><label className="member-email-code-field">Email verification code<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength="6" value={emailCode} onChange={(event) => setEmailCode(event.target.value)} required /></label></>}</fieldset>
+              {emailChangeError && <div className="member-error" role="alert">{emailChangeError}</div>}<div className="member-profile-actions">{emailChangeStep === 'code' ? <button type="button" onClick={cancelEmailChange} disabled={emailChangeBusy}>Cancel email change</button> : <button type="button" onClick={() => setEditing(false)}>Cancel</button>}<button type="submit" disabled={busy === 'profile' || emailChangeBusy}>{busy === 'profile' || emailChangeBusy ? 'Please wait…' : emailChangeStep === 'code' ? 'Verify code and save' : 'Save changes'}</button></div>
             </form> : <>
               <div className="member-profile-identity"><span className="member-profile-avatar">{(profile?.name || session.name || 'M').trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span><div><strong>{profile?.name || session.name}</strong><span>Gym member</span></div><span className="member-profile-id"><Hash size={14} /> Member {profile?.id ?? session.memberId ?? '—'}</span></div>
               <div className="member-profile-groups">
