@@ -2,6 +2,7 @@ package com.gym.authservice.client;
 
 import com.gym.authservice.dto.MemberProfileRequest;
 import com.gym.authservice.dto.MemberProfileResponse;
+import com.gym.authservice.dto.MemberRegistrationMatch;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,25 @@ public class MemberServiceClient {
             return response.id();
         } catch (RestClientException ex) {
             throw new IllegalStateException("Member Service could not create the profile", ex);
+        }
+    }
+
+    public MemberRegistrationMatch findMemberForRegistration(String identifier) {
+        try {
+            MemberRegistrationMatch response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/members/internal/registration-match")
+                            .queryParam("identifier", identifier)
+                            .build())
+                    .header("X-Internal-Service-Key", internalServiceKey)
+                    .retrieve()
+                    .body(MemberRegistrationMatch.class);
+            if (response == null || response.id() == null) {
+                throw new IllegalStateException("Member Service returned no matching profile");
+            }
+            return response;
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("Member Service could not verify the registered profile", ex);
         }
     }
 

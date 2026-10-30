@@ -77,6 +77,20 @@ public class MemberService {
                         ));
     }
 
+    public Member findMemberForAccountRegistration(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter the email or mobile number registered with the gym");
+        }
+        String value = identifier.trim();
+        if (value.contains("@")) {
+            return memberRepository.findByEmailIgnoreCase(value)
+                    .orElseThrow(() -> new MemberNotFoundException("No gym member matches this contact"));
+        }
+        String digits = value.replaceAll("\\D", "");
+        return memberRepository.findByMobile(digits)
+                .orElseThrow(() -> new MemberNotFoundException("No gym member matches this contact"));
+    }
+
     public Member updateMemberProfile(Long id, MemberProfileUpdateRequest request) {
         if (request == null || request.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one profile field must be supplied");

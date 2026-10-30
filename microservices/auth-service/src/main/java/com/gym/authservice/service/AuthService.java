@@ -3,11 +3,20 @@ package com.gym.authservice.service;
 import com.gym.authservice.client.MemberServiceClient;
 import com.gym.authservice.dto.AuthResponse;
 import com.gym.authservice.dto.LoginRequest;
-import com.gym.authservice.dto.MemberProfileRequest;
-import com.gym.authservice.dto.RegisterRequest;
+import com.gym.authservice.dto.MemberRegistrationMatch;
+import com.gym.authservice.dto.RegistrationCodeResponse;
 import com.gym.authservice.entity.Account;
+import com.gym.authservice.entity.MemberRegistrationChallenge;
 import com.gym.authservice.repository.AccountRepository;
-import java.util.UUID;
+import com.gym.authservice.repository.MemberRegistrationChallengeRepository;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,48 +34,137 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final MemberServiceClient memberServiceClient;
+    private final MemberRegistrationChallengeRepository challengeRepository;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final String mailHost;
+    private final String mailFrom;
+    private final int codeExpirationMinutes;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     public AuthService(AccountRepository accountRepository, PasswordEncoder passwordEncoder,
-            JwtService jwtService, MemberServiceClient memberServiceClient) {
+            JwtService jwtService, MemberServiceClient memberServiceClient,
+            MemberRegistrationChallengeRepository challengeRepository,
+            ObjectProvider<JavaMailSender> mailSenderProvider,
+            @Value("${spring.mail.host:}") String mailHost,
+            @Value("${app.registration.code-from:}") String mailFrom,
+            @Value("${app.registration.code-expiration-minutes:10}") int codeExpirationMinutes) {
         this.accountRepository=accountRepository; this.passwordEncoder=passwordEncoder;
         this.jwtService=jwtService; this.memberServiceClient=memberServiceClient;
+        this.challengeRepository=challengeRepository; this.mailSenderProvider=mailSenderProvider;
+        this.mailHost=mailHost; this.mailFrom=mailFrom; this.codeExpirationMinutes=codeExpirationMinutes;
     }
 
-    public AuthResponse register(RegisterRequest request, MemberProfileRequest profileRequest) {
-        String email=request.getEmail().trim().toLowerCase();
-        if (profileRequest.getEmail()==null || !email.equalsIgnoreCase(profileRequest.getEmail().trim())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Account email and member profile email must match");
+    public RegistrationCodeResponse requestMemberRegistrationCode(String identifier) {
+        MemberRegistrationMatch member = findMember(identifier);
+        if (member.email() == null || member.email().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Your gym profile does not have an email address. Contact the gym administrator to add one.");
         }
-        Account account=accountRepository.findByEmailIgnoreCase(email).orElse(null);
-        if (account!=null) {
-            boolean resumable="PENDING".equals(account.getStatus()) && account.getRegistrationKey()!=null
-                    && passwordEncoder.matches(request.getPassword(),account.getPassword());
-            if (!resumable) throw new ResponseStatusException(HttpStatus.CONFLICT,"An account with this email already exists or needs administrator review");
-        } else {
-            account=new Account(request.getName().trim(),email,passwordEncoder.encode(request.getPassword()),"MEMBER");
-            account.setStatus("PENDING");
-            account.setRegistrationKey(UUID.randomUUID().toString());
-            try { account=accountRepository.saveAndFlush(account); }
-            catch (DataIntegrityViolationException ex) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,"An account with this email already exists");
-            }
+        String email = member.email().trim().toLowerCase(Locale.ROOT);
+        if (accountRepository.existsByEmailIgnoreCase(email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A member account already exists. Please sign in.");
+        }
+        if (mailHost == null || mailHost.isBlank() || mailFrom == null || mailFrom.isBlank()
+                || mailSenderProvider.getIfAvailable() == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Email verification is not configured yet. Contact the gym administrator.");
         }
 
-        profileRequest.setName(account.getName());
-        profileRequest.setEmail(account.getEmail());
-        try {
-            Long memberId=memberServiceClient.createMemberProfile(profileRequest,account.getRegistrationKey());
-            account.setMemberId(memberId);
-            account.setStatus("ACTIVE");
-            account=accountRepository.saveAndFlush(account);
-        } catch (RuntimeException ex) {
-            int status=downstreamStatus(ex);
-            log.warn("Member profile registration is incomplete for account ID {} (downstream status {})",account.getId(),status);
-            if (status==400) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Member profile details were rejected. Correct the details and retry registration.");
-            if (status==409) throw new ResponseStatusException(HttpStatus.CONFLICT,"The submitted member profile conflicts with an existing record.");
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Member profile setup is pending. Retry registration with the same email and password.");
+        Instant now = Instant.now();
+        MemberRegistrationChallenge previous = challengeRepository.findById(email).orElse(null);
+        if (previous != null && previous.getCreatedAt().isAfter(now.minusSeconds(60))) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Please wait one minute before requesting another verification code.");
         }
+        String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(1_000_000));
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(mailFrom);
+            message.setTo(email);
+            message.setSubject("Form & Fit member account verification");
+            message.setText("Your Form & Fit verification code is " + code
+                    + ". It expires in " + codeExpirationMinutes + " minutes. If you did not request this, ignore this email.");
+            mailSender.send(message);
+        } catch (RuntimeException exception) {
+            Throwable rootCause = exception;
+            while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+                rootCause = rootCause.getCause();
+            }
+            // Log exception types only: SMTP exception messages may contain account details.
+            log.warn("Could not send member registration verification email; mailError={}, rootCause={}",
+                    exception.getClass().getSimpleName(), rootCause.getClass().getSimpleName());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "We could not send the verification email. Please try again later.");
+        }
+        challengeRepository.save(new MemberRegistrationChallenge(email, member.id(),
+                passwordEncoder.encode(code), now.plus(Duration.ofMinutes(codeExpirationMinutes))));
+        return new RegistrationCodeResponse(maskEmail(email),
+                "A verification code was sent to the email on your gym profile.");
+    }
+
+    public AuthResponse completeMemberRegistration(String identifier, String code, String password) {
+        MemberRegistrationMatch member = findMember(identifier);
+        String email = member.email() == null ? "" : member.email().trim().toLowerCase(Locale.ROOT);
+        MemberRegistrationChallenge challenge = challengeRepository.findById(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Request an email verification code before creating your account."));
+        if (!challenge.getMemberId().equals(member.id())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "The verification code does not match this gym profile. Request a new code.");
+        }
+        if (challenge.getExpiresAt().isBefore(Instant.now())) {
+            challengeRepository.delete(challenge);
+            throw new ResponseStatusException(HttpStatus.GONE,
+                    "The verification code expired. Request a new code.");
+        }
+        if (challenge.getAttempts() >= 5) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many incorrect codes. Request a new verification code.");
+        }
+        if (!passwordEncoder.matches(code, challenge.getCodeHash())) {
+            challenge.setAttempts(challenge.getAttempts() + 1);
+            challengeRepository.save(challenge);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That verification code is incorrect. Check the email and try again.");
+        }
+        if (accountRepository.existsByEmailIgnoreCase(email)) {
+            challengeRepository.delete(challenge);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A member account already exists. Please sign in.");
+        }
+        Account account = new Account(member.name(), email, passwordEncoder.encode(password), "MEMBER");
+        account.setMemberId(member.id());
+        account.setStatus("ACTIVE");
+        try {
+            account = accountRepository.saveAndFlush(account);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A member account already exists. Please sign in.");
+        }
+        challengeRepository.delete(challenge);
         return issueResponse(account);
+    }
+
+    private MemberRegistrationMatch findMember(String identifier) {
+        try {
+            return memberServiceClient.findMemberForRegistration(identifier);
+        } catch (RuntimeException exception) {
+            if (downstreamStatus(exception) == 404) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "You are not registered with this gym. Contact the gym administration to join.");
+            }
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "We could not check your gym registration. Please try again later.");
+        }
+    }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        String local = email.substring(0, at);
+        String visible = local.length() <= 2 ? local.substring(0, 1) : local.substring(0, 2);
+        return visible + "***" + email.substring(at);
     }
 
     private int downstreamStatus(Throwable error) {

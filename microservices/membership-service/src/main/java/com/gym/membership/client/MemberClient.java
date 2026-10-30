@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import java.util.Map;
 
 @Component
 public class MemberClient {
@@ -31,6 +32,17 @@ public class MemberClient {
             if (ex.getStatusCode().value() == 404) throw new MemberNotFoundException(memberId);
             throw new MemberServiceUnavailableException("Member Service returned HTTP " + ex.getStatusCode().value());
         } catch (RestClientException ex) { throw new MemberServiceUnavailableException("Could not communicate with Member Service."); }
+    }
+    public java.math.BigDecimal memberAmount(Long memberId) {
+        try {
+            Map<String, Object> profile = restClient.get().uri("/api/members/internal/{id}/profile", memberId)
+                    .header("X-Internal-Service-Key", internalServiceKey).retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<>() {});
+            Object amount = profile == null ? null : profile.get("amount");
+            return amount == null ? null : new java.math.BigDecimal(amount.toString());
+        } catch (RestClientException ex) {
+            throw new MemberServiceUnavailableException("Could not load the member's assigned plan.");
+        }
     }
     public static class MemberNotFoundException extends RuntimeException {
         public MemberNotFoundException(Long id) { super("Member not found with ID: " + id); }

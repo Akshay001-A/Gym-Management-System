@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Dumbbell, Eye, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { createTrainer, deleteTrainer, getTrainer, getTrainers, updateTrainer } from '../api/trainers'
 
-const emptyTrainer = { name: '', email: '', mobile: '', specialization: '', experienceYears: '', availability: 'AVAILABLE', status: 'ACTIVE' }
+const emptyTrainer = { name: '', email: '', mobile: '', specialization: '', experienceYears: '', availability: '', status: 'ACTIVE' }
+const specializations = ['Strength & Conditioning', 'Personal Training', 'Yoga', 'HIIT', 'Weight Management', 'Rehabilitation', 'CrossFit', 'Pilates', 'Cardio']
+const availabilities = ['Morning', 'Afternoon', 'Evening', 'Weekends', 'Flexible', 'Not Available']
+const statuses = ['ACTIVE', 'INACTIVE']
 
 function TrainerForm({ mode, trainer, error, saving, onClose, onSave }) {
   const [values, setValues] = useState(() => mode === 'edit' ? { ...trainer } : { ...emptyTrainer })
@@ -33,10 +36,10 @@ function TrainerForm({ mode, trainer, error, saving, onClose, onSave }) {
           <label>Full name<input name="name" value={values.name} onChange={change} required maxLength="100" /></label>
           <label>Email address<input name="email" type="email" value={values.email} onChange={change} required /></label>
           <label>Mobile number<input name="mobile" value={values.mobile} onChange={change} required inputMode="numeric" pattern="[0-9]{10}" title="Enter exactly 10 digits" /></label>
-          <label>Specialization<input name="specialization" value={values.specialization} onChange={change} required /></label>
+          <label>Specialization<select name="specialization" value={values.specialization} onChange={change} required><option value="">Select specialization</option>{specializations.map((item) => <option key={item}>{item}</option>)}{values.specialization && !specializations.includes(values.specialization) && <option>{values.specialization}</option>}</select></label>
           <label>Experience in years<input name="experienceYears" type="number" min="0" max="60" step="1" value={values.experienceYears} onChange={change} required /></label>
-          <label>Availability<input name="availability" value={values.availability} onChange={change} required placeholder="AVAILABLE" /></label>
-          <label>Status<input name="status" value={values.status} onChange={change} required placeholder="ACTIVE" /></label>
+          <label>Availability<select name="availability" value={values.availability} onChange={change} required><option value="">Select availability</option>{availabilities.map((item) => <option key={item}>{item}</option>)}{values.availability && !availabilities.includes(values.availability) && <option>{values.availability}</option>}</select></label>
+          <label>Status<select name="status" value={values.status} onChange={change} required>{statuses.map((item) => <option key={item} value={item}>{item === 'ACTIVE' ? 'Active' : 'Inactive'}</option>)}</select></label>
         </div><div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className="button button-primary" disabled={saving}>{saving ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Add trainer'}</button></div></form>
       </section>
     </div>

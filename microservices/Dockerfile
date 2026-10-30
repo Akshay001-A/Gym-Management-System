@@ -18,8 +18,9 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 ARG SERVICE_DIR
+ARG SERVICE_PORT=8080
 COPY --from=build /app/target/*.jar app.jar
 
-EXPOSE 8080
+EXPOSE ${SERVICE_PORT}
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

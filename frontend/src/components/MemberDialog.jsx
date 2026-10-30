@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pencil, Plus, X } from 'lucide-react'
+import { getMembershipPlans } from '../api/member'
 
 const emptyMember = {
-  name: '', email: '', age: '', mobile: '', gymTime: '', gender: '', fatherName: '', amount: '',
+  name: '', email: '', age: '', mobile: '', gymTime: 'Morning', gender: '', fatherName: '', amount: '', plan: 'MONTHLY',
 }
 
 function toFormValues(member) {
-  return Object.fromEntries(Object.keys(emptyMember).map((key) => [key, member?.[key] ?? '']))
+  return Object.fromEntries(Object.keys(emptyMember).map((key) => [key, member?.[key] ?? (key === 'gymTime' ? 'Morning' : '')]))
 }
 
 export default function MemberDialog({ mode, member, loading = false, saving = false, error = '', onClose, onSave }) {
   const [values, setValues] = useState(() => toFormValues(member))
+  const [plans, setPlans] = useState([])
+  const [plansError, setPlansError] = useState('')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    getMembershipPlans({ signal: controller.signal })
+      .then(setPlans)
+      .catch((requestError) => { if (!controller.signal.aborted) setPlansError(requestError.message) })
+    return () => controller.abort()
+  }, [])
 
   const isDetails = mode === 'details'
   const title = isDetails ? 'Member details' : mode === 'edit' ? 'Edit member' : 'Add a member'
@@ -21,6 +32,7 @@ export default function MemberDialog({ mode, member, loading = false, saving = f
 
   function submit(event) {
     event.preventDefault()
+    const selectedPlan = plans.find((plan) => plan.name === values.plan)
     onSave({
       name: values.name.trim(),
       email: values.email.trim() || null,
@@ -29,7 +41,8 @@ export default function MemberDialog({ mode, member, loading = false, saving = f
       gymTime: values.gymTime.trim() || null,
       gender: values.gender.trim() || null,
       fatherName: values.fatherName.trim() || null,
-      amount: values.amount === '' ? null : Number(values.amount),
+      amount: mode === 'create' ? (selectedPlan ? Number(selectedPlan.price) : null) : (values.amount === '' ? null : Number(values.amount)),
+      ...(mode === 'create' ? { plan: values.plan } : {}),
     })
   }
 
@@ -46,13 +59,13 @@ export default function MemberDialog({ mode, member, loading = false, saving = f
             {error && <div className="member-error" role="alert">{error}</div>}
             <div className="member-fields">
               <label>Full name<input name="name" required maxLength="255" value={values.name} onChange={change} readOnly={isDetails} autoFocus={!isDetails} /></label>
-              <label>Email address<input name="email" type="email" value={values.email} onChange={change} readOnly={isDetails} /></label>
+              <label>Email address<input name="email" type="email" value={values.email} onChange={change} readOnly={isDetails} required={!isDetails} /></label>
               <label>Age<input name="age" type="number" min="1" step="1" value={values.age} onChange={change} readOnly={isDetails} /></label>
-              <label>Mobile number<input name="mobile" inputMode="tel" value={values.mobile} onChange={change} readOnly={isDetails} /></label>
-              <label>Preferred gym time<input name="gymTime" value={values.gymTime} onChange={change} readOnly={isDetails} /></label>
+              <label>Mobile number<input name="mobile" inputMode="numeric" pattern="[0-9]{10}" maxLength="10" title="Enter the 10-digit mobile number used for member verification" value={values.mobile} onChange={change} readOnly={isDetails} required={!isDetails} /></label>
+              <label>Preferred gym time<select name="gymTime" value={values.gymTime} onChange={change} disabled={isDetails} required={!isDetails}><option value="">Select a time</option><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
               <label>Gender<input name="gender" value={values.gender} onChange={change} readOnly={isDetails} /></label>
               <label>Father's name<input name="fatherName" value={values.fatherName} onChange={change} readOnly={isDetails} /></label>
-              <label>Amount<input name="amount" type="number" min="0" step="0.01" value={values.amount} onChange={change} readOnly={isDetails} /></label>
+              {mode === 'create' ? <label>Membership plan<select name="plan" value={values.plan} onChange={change} required><option value="">Select a membership plan</option>{plans.map((plan) => <option key={plan.name} value={plan.name}>{plan.name} — ₹{Number(plan.price).toLocaleString('en-IN')} / {plan.durationMonths} month{plan.durationMonths === 1 ? '' : 's'}</option>)}</select>{plansError && <small className="field-help" role="status">Plan choices could not load: {plansError}</small>}<small className="field-help">The member can pay for this assigned plan after signing in.</small></label> : <label>Membership amount<select name="amount" value={values.amount} onChange={change} disabled={isDetails} required={!isDetails}><option value="">Select a membership plan</option>{plans.map((plan) => <option key={plan.name} value={Number(plan.price)}>{plan.name} — ₹{Number(plan.price).toLocaleString('en-IN')}</option>)}{values.amount && !plans.some((plan) => Number(plan.price) === Number(values.amount)) && <option value={values.amount}>Current amount — ₹{Number(values.amount).toLocaleString('en-IN')}</option>}</select>{plansError && <small className="field-help" role="status">Plan prices could not load: {plansError}</small>}</label>}
             </div>
             {isDetails ? <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose}>Close</button></div> : (
               <div className="modal-actions">

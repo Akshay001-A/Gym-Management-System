@@ -14,6 +14,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface MembershipRepository extends JpaRepository<Membership, Long> {
     List<Membership> findByMemberId(Long memberId);
+    java.util.Optional<Membership> findByPaymentId(Long paymentId);
+    java.util.Optional<Membership> findFirstByMemberIdAndPlanNameAndStatusOrderByIdDesc(Long memberId, String planName, String status);
     java.util.Optional<Membership> findFirstByMemberIdAndStatusAndEndDateGreaterThanEqualOrderByEndDateDesc(
             Long memberId, String status, LocalDate today);
     Page<Membership> findByStatusIgnoreCase(String status, Pageable pageable);

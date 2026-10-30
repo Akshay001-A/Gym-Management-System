@@ -10,10 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -32,22 +31,16 @@ public class PaymentController {
     public ResponseEntity<CreatePaymentResponse> createPaymentOrder(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreatePaymentRequest request,
-            @RequestHeader(
-                    value = "Idempotency-Key",
-                    required = false
-            ) String idempotencyKey
+            @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
         Long memberId = getMemberId(jwt);
-
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            idempotencyKey = UUID.randomUUID().toString();
-        }
 
         CreatePaymentResponse response =
                 paymentService.createPaymentOrder(
                         memberId,
                         request.getPlanName(),
-                        idempotencyKey
+                        idempotencyKey,
+                        jwt.getTokenValue()
                 );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -97,7 +90,7 @@ public class PaymentController {
         Long memberId = getMemberId(jwt);
 
         Page<PaymentResponse> response =
-                paymentService.getPaymentHistory(memberId, page, size);
+                paymentService.getPaymentHistory(memberId, page, size, jwt.getTokenValue());
 
         return ResponseEntity.ok(response);
     }
@@ -134,7 +127,7 @@ public class PaymentController {
             }
         }
 
-        throw new IllegalArgumentException(
+        throw new AccessDeniedException(
                 "The authenticated user does not have a valid member ID"
         );
     }

@@ -112,10 +112,14 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/payments/health")
+                        .permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/payments/webhooks/razorpay"
                         ).permitAll()
+                        .requestMatchers("/api/payments/**")
+                        .hasRole("MEMBER")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

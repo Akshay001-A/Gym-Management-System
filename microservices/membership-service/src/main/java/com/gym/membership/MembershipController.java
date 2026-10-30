@@ -1,6 +1,8 @@
 package com.gym.membership;
 
 import com.gym.membership.dto.MembershipPlanView;
+import com.gym.membership.dto.AdminPlanAssignmentRequest;
+import com.gym.membership.dto.PaymentMembershipActivationRequest;
 import com.gym.membership.dto.PaymentSimulationRequest;
 import com.gym.membership.dto.PlanEnrollmentRequest;
 import com.gym.membership.entity.Membership;
@@ -9,11 +11,16 @@ import com.gym.membership.enums.MembershipPlan;
 import com.gym.membership.service.MembershipService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -24,9 +31,17 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/memberships")
 public class MembershipController {
     private final MembershipService membershipService;
+    private final String internalServiceKey;
+
+    @Autowired
+    public MembershipController(MembershipService membershipService,
+            @Value("${app.internal-service.key:}") String internalServiceKey) {
+        this.membershipService = membershipService;
+        this.internalServiceKey = internalServiceKey;
+    }
 
     public MembershipController(MembershipService membershipService) {
-        this.membershipService = membershipService;
+        this(membershipService, "");
     }
 
     @GetMapping("/health")
@@ -52,6 +67,13 @@ public class MembershipController {
     @PreAuthorize("hasRole('MEMBER')")
     public Membership enroll(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PlanEnrollmentRequest request) {
         return membershipService.createMembershipForPlan(memberId(jwt), request.plan());
+    }
+
+    @PostMapping("/me/assigned-plan")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<Membership> recoverAssignedPlan(@AuthenticationPrincipal Jwt jwt) {
+        Membership membership = membershipService.recoverAssignedPlan(memberId(jwt));
+        return membership == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(membership);
     }
 
     @PostMapping("/me/renewals")
@@ -117,6 +139,27 @@ public class MembershipController {
     @PreAuthorize("hasRole('ADMIN')")
     public Membership createMembershipForPlan(@RequestParam Long memberId, @RequestParam MembershipPlan plan) {
         return membershipService.createMembershipForPlan(memberId, plan);
+    }
+
+    @PostMapping("/admin-assignment")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
+    public Membership assignPlan(@Valid @RequestBody AdminPlanAssignmentRequest request) {
+        return membershipService.assignPlanPendingPayment(request.memberId(), request.plan());
+    }
+
+    @PostMapping("/internal/payment-activation")
+    public Membership activatePaidPlan(@RequestHeader("X-Internal-Service-Key") String key,
+            @Valid @RequestBody PaymentMembershipActivationRequest request) {
+        requireInternalKey(key);
+        return membershipService.activateMembershipForPayment(request.paymentId(), request.memberId(), request.plan());
+    }
+
+    private void requireInternalKey(String supplied) {
+        if (internalServiceKey == null || internalServiceKey.isBlank() || supplied == null
+                || !MessageDigest.isEqual(internalServiceKey.getBytes(StandardCharsets.UTF_8), supplied.getBytes(StandardCharsets.UTF_8))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal service credentials");
+        }
     }
 
     @PostMapping("/me/{membershipId}/payments")

@@ -8,10 +8,17 @@ export async function login(email, password) {
   return saveSession(session)
 }
 
-export async function registerMember(account, profile) {
-  const session = await apiRequest('/auth/register', {
+export function requestMemberRegistrationCode(identifier) {
+  return apiRequest('/auth/register/request-code', {
     method: 'POST',
-    body: { account, profile },
+    body: { identifier },
+  })
+}
+
+export async function completeMemberRegistration(identifier, code, password) {
+  const session = await apiRequest('/auth/register/complete', {
+    method: 'POST',
+    body: { identifier, code, password },
   })
   return saveSession(session)
 }

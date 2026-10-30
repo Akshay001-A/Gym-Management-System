@@ -5,6 +5,8 @@ app:
 membership:
   service:
     url: ${MEMBERSHIP_SERVICE_URL:http://localhost:8082}
+  internal-service:
+    key: ${INTERNAL_SERVICE_KEY:}
 
 razorpay:
   key-id: ${RAZORPAY_KEY_ID}

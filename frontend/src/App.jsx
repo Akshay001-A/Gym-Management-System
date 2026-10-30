@@ -11,6 +11,7 @@ import SettingsPage from './components/SettingsPage'
 import HelpSupportPage from './components/HelpSupportPage'
 import { createMember, deleteMember, getMember, getMembersPage, searchMembers, updateMember } from './api/members'
 import { getOverviewCounts } from './api/overview'
+import { assignMembershipPlan } from './api/memberships'
 
 const PAGE_SIZE = 10
 const COMPACT_TABLES_KEY = 'form-fit-compact-tables'
@@ -148,15 +149,25 @@ export default function App() {
     if (dialogSaving || !dialog) return
     setDialogSaving(true)
     setDialogError('')
+    let createdMember = false
     try {
       if (dialog.mode === 'edit') await updateMember(dialog.member.id, payload)
-      else await createMember(payload)
+      else {
+        const { plan, ...memberPayload } = payload
+        const created = await createMember(memberPayload)
+        createdMember = true
+        if (plan) await assignMembershipPlan(created.id, plan)
+      }
       setDialog(null)
       setNotice(dialog.mode === 'edit' ? 'Member updated.' : 'Member added.')
       setMemberPage(0)
       setRefreshKey((key) => key + 1)
     } catch (error) {
-      setDialogError(error.message)
+      if (createdMember) {
+        setDialog(null)
+        setNotice(`Member was created, but the plan could not be assigned: ${error.message}`)
+        setRefreshKey((key) => key + 1)
+      } else setDialogError(error.message)
     } finally {
       setDialogSaving(false)
     }

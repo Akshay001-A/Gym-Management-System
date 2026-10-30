@@ -1,3 +1,4 @@
+
 services:
   # React frontend served by Nginx
   frontend:
@@ -20,6 +21,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_DIR: api-gateway
+        SERVICE_PORT: 8083
     image: gym-api-gateway:latest
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in microservices/.env}
@@ -27,6 +29,7 @@ services:
       MEMBER_SERVICE_URL: http://member-service:8081
       MEMBERSHIP_SERVICE_URL: http://membership-service:8082
       TRAINER_SERVICE_URL: http://trainer-service:8084
+      PAYMENT_SERVICE_URL: http://payment-service:8086
     ports:
       - "8083:8083"
     depends_on:
@@ -34,6 +37,7 @@ services:
       - member-service
       - membership-service
       - trainer-service
+      - payment-service
     restart: unless-stopped
     networks:
       - gym-network
@@ -45,6 +49,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_DIR: auth-service
+        SERVICE_PORT: 8085
     image: gym-auth-service:latest
     env_file:
       - .env
@@ -64,6 +69,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_DIR: member-service
+        SERVICE_PORT: 8081
     image: gym-member-service:latest
     env_file:
       - .env
@@ -82,6 +88,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_DIR: membership-service
+        SERVICE_PORT: 8082
     image: gym-membership-service:latest
     env_file:
       - .env
@@ -101,6 +108,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE_DIR: trainer-service
+        SERVICE_PORT: 8084
     image: gym-trainer-service:latest
     env_file:
       - .env
@@ -108,6 +116,28 @@ services:
       TRAINER_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_trainer_db
     expose:
       - "8084"
+    restart: unless-stopped
+    networks:
+      - gym-network
+
+  # Payment microservice
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: payment-service
+        SERVICE_PORT: 8086
+    image: gym-payment-service:latest
+    env_file:
+      - .env
+    environment:
+      PAYMENT_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_payment_db
+      MEMBERSHIP_SERVICE_URL: http://membership-service:8082
+    ports:
+      - "8086:8086"
+    depends_on:
+      - membership-service
     restart: unless-stopped
     networks:
       - gym-network

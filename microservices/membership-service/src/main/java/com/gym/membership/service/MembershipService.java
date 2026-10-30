@@ -68,7 +68,7 @@ public class MembershipService {
     @Transactional(readOnly = true)
     public Page<Membership> getMembershipPage(Long memberId, String status, Pageable pageable) {
         if (status != null && !status.isBlank()
-                && !List.of("ACTIVE", "EXPIRED", "CANCELLED").contains(status.trim().toUpperCase())) {
+                && !List.of("ACTIVE", "EXPIRED", "CANCELLED", "PENDING_PAYMENT").contains(status.trim().toUpperCase())) {
             throw new IllegalArgumentException("Unsupported membership status");
         }
         if (memberId != null && status != null && !status.isBlank()) {
@@ -127,6 +127,76 @@ public class MembershipService {
     }
 
     @Transactional
+    public Membership assignPlanPendingPayment(Long memberId, MembershipPlan plan) {
+        validateMember(memberId);
+        if (plan == null) throw new IllegalArgumentException("Membership plan is required");
+        Membership pending = membershipRepository
+                .findFirstByMemberIdAndPlanNameAndStatusOrderByIdDesc(memberId, plan.name(), "PENDING_PAYMENT")
+                .orElse(null);
+        if (pending != null) return pending;
+        LocalDate start = LocalDate.now();
+        LocalDate end = start.plusMonths(plan.getDurationMonths());
+        ensureNoActiveOverlap(memberId, start, end);
+        Membership membership = new Membership();
+        membership.setMemberId(memberId);
+        membership.setPlanName(plan.name());
+        membership.setStartDate(start);
+        membership.setEndDate(end);
+        membership.setPrice(plan.getPrice());
+        membership.setStatus("PENDING_PAYMENT");
+        return membershipRepository.save(membership);
+    }
+
+    @Transactional
+    public Membership recoverAssignedPlan(Long memberId) {
+        validateMember(memberId);
+        if (!membershipRepository.findByMemberId(memberId).isEmpty()) return null;
+        BigDecimal amount = memberClient.memberAmount(memberId);
+        if (amount == null) return null;
+        MembershipPlan plan = Arrays.stream(MembershipPlan.values())
+                .filter(candidate -> candidate.getPrice().compareTo(amount) == 0)
+                .findFirst().orElse(null);
+        return plan == null ? null : assignPlanPendingPayment(memberId, plan);
+    }
+
+    @Transactional
+    public Membership activateMembershipForPayment(Long paymentId, Long memberId, MembershipPlan plan) {
+        if (paymentId == null || paymentId <= 0) throw new IllegalArgumentException("A valid payment ID is required");
+        validateMember(memberId);
+        if (plan == null) throw new IllegalArgumentException("Membership plan is required");
+        Membership existingPayment = membershipRepository.findByPaymentId(paymentId).orElse(null);
+        if (existingPayment != null) {
+            if (!existingPayment.getMemberId().equals(memberId) || !existingPayment.getPlanName().equals(plan.name())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Payment is already linked to another membership");
+            }
+            return existingPayment;
+        }
+        Membership membership = membershipRepository
+                .findFirstByMemberIdAndPlanNameAndStatusOrderByIdDesc(memberId, plan.name(), "PENDING_PAYMENT")
+                .orElse(null);
+        if (membership == null) {
+            LocalDate start = LocalDate.now();
+            ensureNoActiveOverlap(memberId, start, start.plusMonths(plan.getDurationMonths()));
+            membership = new Membership();
+            membership.setMemberId(memberId);
+            membership.setPlanName(plan.name());
+            membership.setStartDate(start);
+            membership.setEndDate(start.plusMonths(plan.getDurationMonths()));
+            membership.setPrice(plan.getPrice());
+        } else {
+            LocalDate start = LocalDate.now();
+            LocalDate end = start.plusMonths(plan.getDurationMonths());
+            ensureNoActiveOverlap(memberId, start, end, membership.getId());
+            membership.setStartDate(start);
+            membership.setEndDate(end);
+            membership.setPrice(plan.getPrice());
+        }
+        membership.setPaymentId(paymentId);
+        membership.setStatus(ACTIVE);
+        return membershipRepository.saveAndFlush(membership);
+    }
+
+    @Transactional
     public Membership renewMembership(Long memberId, MembershipPlan plan) {
         validateMember(memberId);
         if (plan == null) throw new IllegalArgumentException("Membership plan is required");
@@ -143,8 +213,8 @@ public class MembershipService {
         if (!membership.getMemberId().equals(memberId)) {
             throw new MembershipNotFoundException(membershipId);
         }
-        if (!ACTIVE.equals(membership.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active memberships can be cancelled");
+        if (!ACTIVE.equals(membership.getStatus()) && !"PENDING_PAYMENT".equals(membership.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active or awaiting-payment memberships can be cancelled");
         }
         membership.setStatus("CANCELLED");
         return membershipRepository.save(membership);

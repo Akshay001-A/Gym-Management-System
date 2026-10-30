@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Activity, BadgeCheck, CreditCard, Dumbbell, LogOut, RefreshCw, UserRound } from 'lucide-react'
 import {
-  cancelMyMembership, enrollInPlan, getMemberTrainers, getMembershipPlans,
-  getMyMemberships, getMyPayments, getMyProfile, renewPlan, simulatePaymentOutcome,
-  startSimulatedPayment, updateMyProfile,
+  cancelMyMembership, getMemberTrainers, getMembershipPlans,
+  getMyMemberships, getMyProfile, recoverAssignedMembershipPlan, updateMyProfile,
 } from '../api/member'
+import PaymentCenter from './PaymentCenter'
+import { getPaymentHistory } from '../api/payments'
 
 const emptyProfile = { name: '', age: '', mobile: '', gymTime: '', email: '', gender: '', fatherName: '' }
-const pages = { home: 'Overview', memberships: 'My Memberships', trainers: 'Trainers', payments: 'Payment History', profile: 'My Profile' }
+const pages = { home: 'Overview', memberships: 'My Memberships', trainers: 'Trainers', payments: 'Payments', profile: 'My Profile' }
+
+async function loadMembershipsWithAssignedPlan() {
+  let current = await getMyMemberships()
+  if (!current.length) {
+    await recoverAssignedMembershipPlan()
+    current = await getMyMemberships()
+  }
+  return current
+}
 
 export default function MemberPortal({ session, onLogout }) {
   const [page, setPage] = useState('home')
@@ -15,7 +25,7 @@ export default function MemberPortal({ session, onLogout }) {
   const [memberships, setMemberships] = useState([])
   const [plans, setPlans] = useState([])
   const [trainers, setTrainers] = useState([])
-  const [payments, setPayments] = useState([])
+  const [selectedPaymentPlan, setSelectedPaymentPlan] = useState('')
   const [today, setToday] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -23,12 +33,17 @@ export default function MemberPortal({ session, onLogout }) {
   const [notice, setNotice] = useState('')
   const [editing, setEditing] = useState(false)
   const [profileForm, setProfileForm] = useState(emptyProfile)
+  const clearSelectedPaymentPlan = useCallback(() => setSelectedPaymentPlan(''), [])
+  const refreshMemberships = useCallback(async () => {
+    setMemberships(await loadMembershipsWithAssignedPlan())
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     setError('')
+    try { await getPaymentHistory({ page: 0, size: 100 }) } catch { /* Membership access remains available when payment history is offline. */ }
     const results = await Promise.allSettled([
-      getMyProfile(), getMyMemberships(), getMembershipPlans(), getMemberTrainers(), getMyPayments(),
+      getMyProfile(), loadMembershipsWithAssignedPlan(), getMembershipPlans(), getMemberTrainers(),
     ])
     setToday(new Date().toISOString().slice(0, 10))
     if (results[0].status === 'fulfilled') {
@@ -38,7 +53,6 @@ export default function MemberPortal({ session, onLogout }) {
     if (results[1].status === 'fulfilled') setMemberships(results[1].value)
     if (results[2].status === 'fulfilled') setPlans(results[2].value)
     if (results[3].status === 'fulfilled') setTrainers(results[3].value)
-    if (results[4].status === 'fulfilled') setPayments(results[4].value?.content ?? [])
     setLoading(false)
   }, [])
 
@@ -50,16 +64,9 @@ export default function MemberPortal({ session, onLogout }) {
   const currentMembership = useMemo(() => memberships.find((item) =>
     item.status === 'ACTIVE' && item.endDate >= today), [memberships, today])
 
-  async function changePlan(plan, isRenewal) {
-    setBusy('plan')
-    setNotice('')
-    try {
-      if (isRenewal) await renewPlan(plan)
-      else await enrollInPlan(plan)
-      setNotice(isRenewal ? 'Renewal scheduled.' : 'Membership started.')
-      await refresh()
-    } catch (requestError) { setNotice(requestError.message) }
-    finally { setBusy('') }
+  function choosePlan(plan) {
+    setSelectedPaymentPlan(plan)
+    setPage('payments')
   }
 
   async function cancelMembership(id) {
@@ -72,17 +79,8 @@ export default function MemberPortal({ session, onLogout }) {
     finally { setBusy('') }
   }
 
-  async function payDemo(id) {
-    setBusy('payment-' + id)
-    setNotice('')
-    try {
-      const key = window.crypto?.randomUUID?.() ?? ('web-' + Date.now() + '-' + Math.random().toString(16).slice(2))
-      const pending = await startSimulatedPayment(id, key)
-      await simulatePaymentOutcome(pending.id, 'SUCCESS')
-      setNotice('Demo payment recorded as successful. No money was charged.')
-      await refresh()
-    } catch (requestError) { setNotice(requestError.message) }
-    finally { setBusy('') }
+  function payMembership(planName) {
+    choosePlan(planName)
   }
 
   async function saveProfile(event) {
@@ -135,24 +133,24 @@ export default function MemberPortal({ session, onLogout }) {
             </section>
             <details className="member-panel member-collapsible">
               <summary><span><strong>Membership plans</strong><small>Compare prices and durations</small></span><span className="member-detail-count">{plans.length} plans</span></summary>
-              <PlanCards plans={plans} active={Boolean(currentMembership)} busy={busy} onChoose={(plan) => changePlan(plan, Boolean(currentMembership))} />
+              <PlanCards plans={plans} busy={busy} onChoose={choosePlan} />
             </details>
             <details className="member-panel member-collapsible">
               <summary><span><strong>Membership history</strong><small>Your plans, payments, and status</small></span><span className="member-detail-count">{memberships.length} records</span></summary>
-              {memberships.length ? <MembershipList items={memberships.slice(0, 3)} busy={busy} onCancel={cancelMembership} onPay={payDemo} /> : <p className="member-empty">No membership records yet.</p>}
+              {memberships.length ? <MembershipList items={memberships.slice(0, 3)} busy={busy} onCancel={cancelMembership} onPay={payMembership} /> : <p className="member-empty">No membership records yet.</p>}
             </details>
             <details className="member-panel member-collapsible">
               <summary><span><strong>Meet the trainers</strong><small>Browse your club’s coaching team</small></span><span className="member-detail-count">{trainers.length} trainers</span></summary>
               <TrainerList trainers={trainers.slice(0, 4)} />
             </details>
             <details className="member-panel member-collapsible">
-              <summary><span><strong>Payment history</strong><small>Demo payments only · no real charges</small></span><span className="member-detail-count">{payments.length} payments</span></summary>
-              {payments.length ? <div className="member-table-scroll"><table><thead><tr><th>Payment</th><th>Membership</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.id}><td>#{payment.id}</td><td>#{payment.membershipId}</td><td>₹{payment.amount}</td><td>{payment.status}</td><td>{payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : '—'}</td></tr>)}</tbody></table></div> : <p className="member-empty">No payment records yet.</p>}
+              <summary><span><strong>Payment history</strong><small>Verified transactions from the Payment Service</small></span><span className="member-detail-count">View history</span></summary>
+              <button className="member-text-button member-payment-link" type="button" onClick={() => setPage('payments')}>Open payment history</button>
             </details>
           </>}
-          {page === 'memberships' && <section className="member-panel"><div className="member-section-heading"><div><h2>My memberships</h2><p>Memberships are tied to your member profile.</p></div></div>{memberships.length ? <MembershipList items={memberships} busy={busy} onCancel={cancelMembership} onPay={payDemo} /> : <p className="member-empty">No membership records yet.</p>}</section>}
+          {page === 'memberships' && <section className="member-panel"><div className="member-section-heading"><div><h2>My memberships</h2><p>Memberships are tied to your member profile.</p></div></div>{memberships.length ? <MembershipList items={memberships} busy={busy} onCancel={cancelMembership} onPay={payMembership} /> : <p className="member-empty">No membership records yet.</p>}</section>}
           {page === 'trainers' && <section className="member-panel"><div className="member-section-heading"><div><h2>Trainers</h2><p>Trainer directory from the Trainer Service.</p></div></div><TrainerList trainers={trainers} /></section>}
-          {page === 'payments' && <PaymentHistory payments={payments} />}
+          {page === 'payments' && <PaymentCenter initialPlan={selectedPaymentPlan} session={session} onPlanConsumed={clearSelectedPaymentPlan} onMembershipUpdated={refreshMemberships} hasCurrentMembership={Boolean(currentMembership)} />}
           {page === 'profile' && <section className="member-panel">
             <div className="member-section-heading"><div><h2>My profile</h2><p>Update your own contact information.</p></div>{!editing && <button className="member-text-button" type="button" onClick={() => setEditing(true)}>Edit profile</button>}</div>
             {editing ? <form className="member-profile-form" onSubmit={saveProfile}>
@@ -167,26 +165,22 @@ export default function MemberPortal({ session, onLogout }) {
   )
 }
 
-function PaymentHistory({ payments }) {
-  return <section className="member-panel">
-    <div className="member-section-heading"><div><h2>Payment history</h2><p>Demo payments only. No real payment is collected by this app.</p></div></div>
-    {payments.length ? <div className="member-table-scroll"><table><thead><tr><th>Payment</th><th>Membership</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.id}><td>#{payment.id}</td><td>#{payment.membershipId}</td><td>₹{payment.amount}</td><td>{payment.status}</td><td>{payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : '—'}</td></tr>)}</tbody></table></div> : <p className="member-empty">No payment records yet.</p>}
-  </section>
-}
-
-function PlanCards({ plans, active, busy, onChoose }) {
+function PlanCards({ plans, busy, onChoose }) {
   if (!plans.length) return <p className="member-empty">Membership plans are not available right now.</p>
   return <div className="member-plan-grid">{plans.map((plan) => <article className="member-plan-card" key={plan.name}>
     <div><span>{plan.name}</span><strong>₹{Number(plan.price).toLocaleString('en-IN')}</strong><small>{plan.durationMonths} month{plan.durationMonths === 1 ? '' : 's'}</small></div>
-    <button type="button" disabled={busy === 'plan'} onClick={() => onChoose(plan.name)}>{active ? 'Schedule renewal' : 'Choose plan'}</button>
+    <button type="button" disabled={Boolean(busy)} onClick={() => onChoose(plan.name)}>Proceed to payment</button>
   </article>)}</div>
 }
 
 function MembershipList({ items, busy, onCancel, onPay }) {
-  return <div className="member-table-scroll"><table><thead><tr><th>Plan</th><th>Price</th><th>Dates</th><th>Status</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
-    <td>{item.planName}</td><td>₹{item.price}</td><td>{item.startDate} – {item.endDate}</td><td><span className="member-status">{item.status}</span></td>
-    <td><div className="member-row-actions">{item.status === 'ACTIVE' && <><button type="button" disabled={Boolean(busy)} onClick={() => onPay(item.id)}>Demo pay</button><button type="button" disabled={Boolean(busy)} onClick={() => onCancel(item.id)}>Cancel</button></>}</div></td>
-  </tr>)}</tbody></table></div>
+  return <div className="member-table-scroll"><table><thead><tr><th>Plan</th><th>Price</th><th>Dates</th><th>Status</th><th>Actions</th></tr></thead><tbody>{items.map((item) => {
+    const membershipId = item.id ?? item.membershipId
+    return <tr key={membershipId ?? `${item.planName}-${item.startDate}`}>
+      <td>{item.planName}</td><td>₹{item.price}</td><td>{item.startDate} – {item.endDate}</td><td><span className="member-status">{item.status}</span></td>
+      <td><div className="member-row-actions">{item.status === 'PENDING_PAYMENT' && <><button type="button" disabled={Boolean(busy)} onClick={() => onPay(item.planName)}>Pay with Razorpay</button><button type="button" disabled={Boolean(busy) || !membershipId} onClick={() => onCancel(membershipId)}>Remove</button></>}{item.status === 'ACTIVE' && <button type="button" disabled={Boolean(busy) || !membershipId} onClick={() => onCancel(membershipId)}>Cancel</button>}</div></td>
+    </tr>
+  })}</tbody></table></div>
 }
 
 function TrainerList({ trainers }) {

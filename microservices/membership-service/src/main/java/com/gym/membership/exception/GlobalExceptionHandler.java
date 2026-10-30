@@ -12,10 +12,14 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private ResponseEntity<Map<String,Object>> error(HttpStatus status,String message,HttpServletRequest request){Map<String,Object> body=new LinkedHashMap<>();body.put("timestamp",Instant.now().toString());body.put("status",status.value());body.put("code",status.name());body.put("error",status.getReasonPhrase());body.put("message",message);body.put("path",request.getRequestURI());return ResponseEntity.status(status).body(body);}
     @ExceptionHandler(MembershipNotFoundException.class)
     public ResponseEntity<Map<String,Object>> notFound(MembershipNotFoundException ex,HttpServletRequest req){return error(HttpStatus.NOT_FOUND,"Membership not found",req);}
@@ -29,10 +33,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String,Object>> invalidBody(HttpMessageNotReadableException ex,HttpServletRequest req){return error(HttpStatus.BAD_REQUEST,"Invalid JSON request or field type",req);}
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String,Object>> status(ResponseStatusException ex,HttpServletRequest req){HttpStatus status=HttpStatus.valueOf(ex.getStatusCode().value());return error(status,ex.getReason()==null?status.getReasonPhrase():ex.getReason(),req);}
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String,Object>> invalidPathParameter(MethodArgumentTypeMismatchException ex,HttpServletRequest req){return error(HttpStatus.BAD_REQUEST,"Invalid membership ID",req);}
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String,Object>> badRequest(IllegalArgumentException ex,HttpServletRequest req){return error(HttpStatus.BAD_REQUEST,"Invalid membership request",req);}
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String,Object>> conflict(DataIntegrityViolationException ex,HttpServletRequest req){return error(HttpStatus.CONFLICT,"Membership data conflicts with an existing record",req);}
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String,Object>> unexpected(Exception ex,HttpServletRequest req){return error(HttpStatus.INTERNAL_SERVER_ERROR,"An unexpected server error occurred",req);}
+    public ResponseEntity<Map<String,Object>> unexpected(Exception ex,HttpServletRequest req){log.error("Unexpected membership service error for {}",req.getRequestURI(),ex);return error(HttpStatus.INTERNAL_SERVER_ERROR,"An unexpected server error occurred",req);}
 }

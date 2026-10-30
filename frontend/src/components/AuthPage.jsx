@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { BadgeCheck, Dumbbell, LockKeyhole, UserRound } from 'lucide-react'
-import { login, registerMember } from '../api/auth'
+import { completeMemberRegistration, login, requestMemberRegistrationCode } from '../api/auth'
 
-const initialForm = { name: '', email: '', password: '', age: '', mobile: '', gymTime: 'Morning', gender: '', fatherName: '' }
+const initialForm = { email: '', identifier: '', verificationCode: '', password: '', confirmPassword: '' }
 
 export default function AuthPage({ onAuthenticated }) {
   const [mode, setMode] = useState('login')
   const [values, setValues] = useState(initialForm)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [registrationStep, setRegistrationStep] = useState('contact')
+  const [verifiedEmailHint, setVerifiedEmailHint] = useState('')
   const isRegister = mode === 'register'
 
   function change(event) { setValues((current) => ({ ...current, [event.target.name]: event.target.value })) }
@@ -24,13 +26,20 @@ export default function AuthPage({ onAuthenticated }) {
     setBusy(true)
     setError('')
     try {
-      const session = isRegister
-        ? await registerMember(
-          { name: values.name.trim(), email: values.email.trim(), password: values.password },
-          { name: values.name.trim(), email: values.email.trim(), age: Number(values.age), mobile: values.mobile.trim(), gymTime: values.gymTime, gender: values.gender, fatherName: values.fatherName.trim(), amount: 0 },
-        )
-        : await login(values.email.trim(), values.password)
-      onAuthenticated(session)
+      if (isRegister && registrationStep === 'contact') {
+        const result = await requestMemberRegistrationCode(values.identifier.trim())
+        setVerifiedEmailHint(result.maskedEmail || '')
+        setRegistrationStep('verify')
+      } else if (isRegister) {
+        if (values.password !== values.confirmPassword) {
+          setError('The passwords do not match.')
+          return
+        }
+        const session = await completeMemberRegistration(values.identifier.trim(), values.verificationCode.trim(), values.password)
+        onAuthenticated(session)
+      } else {
+        onAuthenticated(await login(values.email.trim(), values.password))
+      }
     } catch (requestError) { setError(requestError.message) }
     finally { setBusy(false) }
   }
@@ -54,34 +63,23 @@ export default function AuthPage({ onAuthenticated }) {
         </section>
         <section className="auth-card" id="member-access">
           <p className="auth-eyebrow">{isRegister ? 'YOUR FITNESS JOURNEY' : 'MEMBER ACCESS'}</p>
-          <h2>{isRegister ? 'Create your account' : 'Welcome back'}</h2>
-          <p className="auth-description">{isRegister ? 'Create your member login and profile.' : 'Sign in with the account provided by your club.'}</p>
+          <h2>{isRegister ? registrationStep === 'contact' ? 'Create your account' : 'Verify your email' : 'Welcome back'}</h2>
+          <p className="auth-description">{isRegister ? registrationStep === 'contact' ? 'Use the email or mobile number already registered by your gym.' : `Enter the code sent to ${verifiedEmailHint || 'the email on your gym profile'} and set your password.` : 'Sign in with the account provided by your club.'}</p>
           <div className="auth-tabs" role="tablist" aria-label="Account access">
-            <button type="button" role="tab" aria-selected={!isRegister} className={!isRegister ? 'auth-tab active' : 'auth-tab'} onClick={() => { setMode('login'); setError('') }}>Sign in</button>
-            <button type="button" role="tab" aria-selected={isRegister} className={isRegister ? 'auth-tab active' : 'auth-tab'} onClick={() => { setMode('register'); setError('') }}>Join as member</button>
+            <button type="button" role="tab" aria-selected={!isRegister} className={!isRegister ? 'auth-tab active' : 'auth-tab'} onClick={() => { setMode('login'); setRegistrationStep('contact'); setError('') }}>Sign in</button>
+            <button type="button" role="tab" aria-selected={isRegister} className={isRegister ? 'auth-tab active' : 'auth-tab'} onClick={() => { setMode('register'); setRegistrationStep('contact'); setError('') }}>Join as member</button>
           </div>
           <form className={isRegister ? 'auth-form is-register' : 'auth-form'} onSubmit={submit}>
-            {isRegister && <label>Full name<input name="name" autoComplete="name" maxLength="100" value={values.name} onChange={change} required /></label>}
-            {isRegister ? <div className="auth-register-credentials">
-              <label>Email address<input name="email" type="email" autoComplete="email" value={values.email} onChange={change} required /></label>
-              <label>Password<input name="password" type="password" autoComplete="new-password" minLength="8" value={values.password} onChange={change} required /></label>
-            </div> : <>
+            {isRegister && registrationStep === 'contact' ? <label>Email or mobile number<input name="identifier" type="text" autoComplete="username" maxLength="150" value={values.identifier} onChange={change} required /></label> : isRegister ? <>
+              <label>6-digit email verification code<input name="verificationCode" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength="6" value={values.verificationCode} onChange={change} required /></label>
+              <label>Create password<input name="password" type="password" autoComplete="new-password" minLength="8" maxLength="72" value={values.password} onChange={change} required /></label>
+              <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" minLength="8" maxLength="72" value={values.confirmPassword} onChange={change} required /></label>
+            </> : <>
               <label>Email address<input name="email" type="email" autoComplete="email" value={values.email} onChange={change} required /></label>
               <label>Password<input name="password" type="password" autoComplete="current-password" minLength="8" value={values.password} onChange={change} required /></label>
             </>}
-            {isRegister && <>
-              <div className="auth-form-row">
-                <label>Age<input name="age" type="number" min="1" max="120" value={values.age} onChange={change} required /></label>
-                <label>Mobile<input name="mobile" inputMode="tel" maxLength="20" value={values.mobile} onChange={change} required /></label>
-              </div>
-              <div className="auth-form-row">
-                <label>Preferred gym time<select name="gymTime" value={values.gymTime} onChange={change}><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
-                <label>Gender<input name="gender" maxLength="20" value={values.gender} onChange={change} required /></label>
-              </div>
-              <label>Parent / guardian name<input name="fatherName" maxLength="100" value={values.fatherName} onChange={change} required /></label>
-            </>}
             {error && <p className="auth-error" role="alert">{error}</p>}
-            <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : <><LockKeyhole size={17} />{isRegister ? 'Create member account' : 'Sign in'}</>}</button>
+            <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : <><LockKeyhole size={17} />{isRegister ? registrationStep === 'contact' ? 'Send verification code' : 'Create member account' : 'Sign in'}</>}</button>
           </form>
           <div className="auth-footnote"><UserRound size={15} /><span>Your role is assigned by the backend after authentication.</span></div>
           <p className="auth-admin-note">Administrator access is created through protected first-admin setup, not member registration.</p>

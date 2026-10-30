@@ -3,7 +3,9 @@ package com.gym.authservice.controller;
 
 import com.gym.authservice.dto.AuthResponse;
 import com.gym.authservice.dto.LoginRequest;
-import com.gym.authservice.dto.RegistrationRequest;
+import com.gym.authservice.dto.RegistrationCodeRequest;
+import com.gym.authservice.dto.CompleteMemberRegistrationRequest;
+import com.gym.authservice.dto.RegistrationCodeResponse;
 import com.gym.authservice.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -22,18 +24,24 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @PostMapping("/register/request-code")
+    public ResponseEntity<RegistrationCodeResponse> requestRegistrationCode(
+            @Valid @RequestBody RegistrationCodeRequest request) {
+        return ResponseEntity.ok(authService.requestMemberRegistrationCode(request.identifier()));
+    }
+
+    @PostMapping("/register/complete")
+    public ResponseEntity<AuthResponse> completeRegistration(
+            @Valid @RequestBody CompleteMemberRegistrationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                authService.completeMemberRegistration(
+                        request.identifier(), request.code(), request.password()));
+    }
+
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(
-            @Valid @RequestBody RegistrationRequest request) {
-
-        AuthResponse response = authService.register(
-                request.getAccount(),
-                request.getProfile()
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
+    public ResponseEntity<Void> legacyRegistration() {
+        throw new org.springframework.web.server.ResponseStatusException(
+                HttpStatus.GONE, "Use email verification to create a member account.");
     }
 
     @PostMapping("/login")

@@ -22,6 +22,10 @@ spring:
               uri: ${TRAINER_SERVICE_URL:http://localhost:8084}
               predicates:
                 - Path=/api/trainers/**
+            - id: payment-service
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8086}
+              predicates:
+                - Path=/api/payments/**
 server:
   port: 8083
 

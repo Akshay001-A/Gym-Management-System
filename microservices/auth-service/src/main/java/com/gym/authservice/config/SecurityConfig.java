@@ -23,7 +23,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,ObjectMapper mapper) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable).formLogin(AbstractHttpConfigurer::disable).httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth->auth.requestMatchers("/api/auth/register","/api/auth/login","/actuator/health","/actuator/health/**","/actuator/info","/api/admin-setup/**").permitAll().anyRequest().authenticated())
+                .authorizeHttpRequests(auth->auth.requestMatchers(
+                        "/api/auth/**",
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/actuator/info",
+                        "/api/admin-setup/**"
+                ).permitAll().anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2->oauth2.jwt(Customizer.withDefaults()))
                 .exceptionHandling(errors->errors.authenticationEntryPoint((req,res,ex)->writeError(req,res,mapper,HttpStatus.UNAUTHORIZED,"Authentication required"))
                         .accessDeniedHandler((req,res,ex)->writeError(req,res,mapper,HttpStatus.FORBIDDEN,"You do not have permission to access this resource")));

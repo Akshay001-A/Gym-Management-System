@@ -22,7 +22,7 @@ public class SecurityConfig {
         JwtGrantedAuthoritiesConverter roles=new JwtGrantedAuthoritiesConverter();roles.setAuthoritiesClaimName("role");roles.setAuthorityPrefix("ROLE_");
         JwtAuthenticationConverter jwt=new JwtAuthenticationConverter();jwt.setJwtGrantedAuthoritiesConverter(roles);
         http.csrf(csrf->csrf.disable()).formLogin(form->form.disable()).httpBasic(basic->basic.disable())
-                .authorizeHttpRequests(auth->auth.requestMatchers("/api/memberships/health","/actuator/health","/actuator/health/**","/actuator/info").permitAll().anyRequest().authenticated())
+                .authorizeHttpRequests(auth->auth.requestMatchers("/api/memberships/health","/api/memberships/internal/payment-activation","/actuator/health","/actuator/health/**","/actuator/info").permitAll().anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2->oauth2.jwt(config->config.jwtAuthenticationConverter(jwt)))
                 .exceptionHandling(errors->errors.authenticationEntryPoint((req,res,ex)->writeError(req,res,mapper,HttpStatus.UNAUTHORIZED,"Authentication required"))
                         .accessDeniedHandler((req,res,ex)->writeError(req,res,mapper,HttpStatus.FORBIDDEN,"You do not have permission to access this resource")));

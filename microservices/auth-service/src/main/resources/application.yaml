@@ -3,6 +3,15 @@ spring:
   application:
     name: auth-service
 
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:true}
+
   datasource:
     url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/gym_auth_db}
     username: ${DB_USERNAME:postgres}
@@ -29,6 +38,10 @@ app:
 
   internal-service:
     key: ${INTERNAL_SERVICE_KEY:}
+
+  registration:
+    code-from: ${MAIL_FROM:}
+    code-expiration-minutes: 10
 
   admin-setup:
     enabled: ${ADMIN_SETUP_ENABLED:false}

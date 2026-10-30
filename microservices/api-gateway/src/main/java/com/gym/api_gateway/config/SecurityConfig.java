@@ -27,8 +27,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter converter, ObjectMapper mapper) throws Exception {
         http.csrf(csrf -> csrf.disable()).formLogin(form -> form.disable()).httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST,"/api/auth/register","/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/memberships/health","/actuator/health","/actuator/health/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/payments/health").permitAll()
+                        .requestMatchers(HttpMethod.POST,"/api/payments/webhooks/razorpay").permitAll()
+                        .requestMatchers("/api/payments/**").hasRole("MEMBER")
                         .requestMatchers(HttpMethod.GET,"/api/members/me").hasRole("MEMBER")
                         .requestMatchers(HttpMethod.PATCH,"/api/members/me").hasRole("MEMBER")
                         .requestMatchers("/api/members/**").hasRole("ADMIN")

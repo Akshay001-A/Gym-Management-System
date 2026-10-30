@@ -5,6 +5,7 @@ import com.gym.memberservice.dto.AdminMemberRequest;
 import com.gym.memberservice.dto.MemberProfileUpdateRequest;
 import com.gym.memberservice.dto.MemberRegistrationRequest;
 import com.gym.memberservice.dto.MemberResponse;
+import com.gym.memberservice.dto.MemberRegistrationMatch;
 import com.gym.memberservice.exception.MemberNotFoundException;
 import com.gym.memberservice.service.MemberService;
 import jakarta.validation.Valid;
@@ -52,6 +53,16 @@ public class MemberController {
         return toResponse(memberService.createMemberForRegistration(toMember(request), registrationKey));
     }
 
+    @GetMapping("/internal/registration-match")
+    @PreAuthorize("hasRole('INTERNAL_SERVICE')")
+    public MemberRegistrationMatch findMemberForAccountRegistration(
+            @RequestHeader(value = "X-Internal-Service-Key", required = false) String key,
+            @RequestParam String identifier) {
+        requireInternalKey(key);
+        var member = memberService.findMemberForAccountRegistration(identifier);
+        return new MemberRegistrationMatch(member.getId(), member.getName(), member.getEmail(), member.getMobile());
+    }
+
     @DeleteMapping("/internal/{id}")
     @PreAuthorize("hasRole('INTERNAL_SERVICE')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -67,6 +78,15 @@ public class MemberController {
             @PathVariable Long id) {
         requireInternalKey(key);
         return memberService.existsById(id);
+    }
+
+    @GetMapping("/internal/{id}/profile")
+    @PreAuthorize("hasRole('INTERNAL_SERVICE')")
+    public MemberResponse getMemberProfileInternal(
+            @RequestHeader(value = "X-Internal-Service-Key", required = false) String key,
+            @PathVariable Long id) {
+        requireInternalKey(key);
+        return toResponse(memberService.getMemberById(id));
     }
 
     @GetMapping("/me")

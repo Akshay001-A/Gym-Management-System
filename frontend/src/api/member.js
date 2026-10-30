@@ -3,6 +3,7 @@ import { apiRequest } from './client'
 export function getMyProfile(options = {}) { return apiRequest('/members/me', options) }
 export function updateMyProfile(profile) { return apiRequest('/members/me', { method: 'PATCH', body: profile }) }
 export function getMyMemberships(options = {}) { return apiRequest('/memberships/me', options) }
+export function recoverAssignedMembershipPlan() { return apiRequest('/memberships/me/assigned-plan', { method: 'POST' }) }
 export function getMembershipPlans(options = {}) { return apiRequest('/memberships/plans', options) }
 export function enrollInPlan(plan) { return apiRequest('/memberships/me', { method: 'POST', body: { plan } }) }
 export function renewPlan(plan) { return apiRequest('/memberships/me/renewals', { method: 'POST', body: { plan } }) }

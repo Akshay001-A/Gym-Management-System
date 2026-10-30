@@ -17,8 +17,7 @@ export function getMembership(id, { signal } = {}) {
 }
 
 export function assignMembershipPlan(memberId, plan) {
-  const params = new URLSearchParams({ memberId, plan })
-  return apiRequest(`/memberships/plan?${params}`, { method: 'POST' })
+  return apiRequest('/memberships/admin-assignment', { method: 'POST', body: { memberId, plan } })
 }
 
 export function updateMembership(id, membership) {

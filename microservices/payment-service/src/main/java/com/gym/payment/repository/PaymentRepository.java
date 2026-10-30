@@ -28,6 +28,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             Pageable pageable
     );
 
+    Optional<Payment> findFirstByMemberIdAndPlanNameAndStatusAndVerifiedAtNotNullOrderByVerifiedAtDesc(
+            Long memberId,
+            String planName,
+            PaymentStatus status
+    );
+
     boolean existsByRazorpayPaymentIdAndStatus(
             String razorpayPaymentId,
             PaymentStatus status

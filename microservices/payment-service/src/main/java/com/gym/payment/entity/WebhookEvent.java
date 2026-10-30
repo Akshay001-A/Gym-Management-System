@@ -33,6 +33,12 @@ public class WebhookEvent {
     @Column(name = "processed_at")
     private Instant processedAt;
 
+    @Column(name = "last_attempt_at")
+    private Instant lastAttemptAt;
+
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount = 0;
+
     @Column(name = "processing_status", nullable = false, length = 20)
     private String processingStatus = "RECEIVED";
 
@@ -47,6 +53,7 @@ public class WebhookEvent {
         this.eventType = eventType;
         this.receivedAt = Instant.now();
         this.processingStatus = "RECEIVED";
+        this.attemptCount = 0;
     }
 
     @PrePersist
@@ -54,6 +61,25 @@ public class WebhookEvent {
         if (receivedAt == null) {
             receivedAt = Instant.now();
         }
+    }
+
+    public void recordProcessingAttempt() {
+        this.attemptCount++;
+        this.lastAttemptAt = Instant.now();
+        this.processingStatus = "PROCESSING";
+        this.failureReason = null;
+    }
+
+    public void markProcessed() {
+        this.processingStatus = "PROCESSED";
+        this.processedAt = Instant.now();
+        this.failureReason = null;
+    }
+
+    public void markFailed(String reason) {
+        this.processingStatus = "FAILED";
+        this.failureReason = reason;
+        this.processedAt = null;
     }
 
     public Long getId() {
@@ -74,6 +100,14 @@ public class WebhookEvent {
 
     public Instant getProcessedAt() {
         return processedAt;
+    }
+
+    public Instant getLastAttemptAt() {
+        return lastAttemptAt;
+    }
+
+    public int getAttemptCount() {
+        return attemptCount;
     }
 
     public String getProcessingStatus() {

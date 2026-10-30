@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import jakarta.validation.constraints.FutureOrPresent;
 
 @Entity
-@Table(name = "memberships")
+@Table(name = "memberships", uniqueConstraints = @UniqueConstraint(name = "uk_membership_payment_id", columnNames = "payment_id"))
 public class Membership {
 
     @Id
@@ -35,6 +35,9 @@ public class Membership {
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal price;
+
+    @Column(name = "payment_id")
+    private Long paymentId;
 
     public Membership() {
     }
@@ -90,4 +93,7 @@ public class Membership {
     public void setPrice(BigDecimal price) {
         this.price = price;
     }
+
+    public Long getPaymentId() { return paymentId; }
+    public void setPaymentId(Long paymentId) { this.paymentId = paymentId; }
 }

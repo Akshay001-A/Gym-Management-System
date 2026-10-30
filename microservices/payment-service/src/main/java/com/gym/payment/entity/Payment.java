@@ -9,6 +9,10 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "payments",
+        indexes = @Index(
+                name = "ix_payments_member_created_at",
+                columnList = "member_id, created_at"
+        ),
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_payment_idempotency_key",

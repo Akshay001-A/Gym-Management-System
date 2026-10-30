@@ -6,38 +6,60 @@ import com.gym.payment.dto.PaymentResponse;
 import com.gym.payment.dto.VerifyPaymentRequest;
 import com.gym.payment.entity.Payment;
 import com.gym.payment.enums.PaymentStatus;
+import com.gym.payment.exception.PaymentNotFoundException;
+import com.gym.payment.exception.PaymentProcessingException;
 import com.gym.payment.repository.PaymentRepository;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class PaymentService {
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private final PaymentRepository paymentRepository;
     private final RazorpayService razorpayService;
     private final MembershipIntegrationService membershipIntegrationService;
+    private final PaymentOrderPersistenceService orderPersistenceService;
 
     public PaymentService(
             PaymentRepository paymentRepository,
             RazorpayService razorpayService,
-            MembershipIntegrationService membershipIntegrationService
+            MembershipIntegrationService membershipIntegrationService,
+            PaymentOrderPersistenceService orderPersistenceService
     ) {
         this.paymentRepository = paymentRepository;
         this.razorpayService = razorpayService;
         this.membershipIntegrationService = membershipIntegrationService;
+        this.orderPersistenceService = orderPersistenceService;
     }
 
-    @Transactional
+    // IMPORTANT: Do not add @Transactional to this method.
     public CreatePaymentResponse createPaymentOrder(
             Long memberId,
             String planName,
             String idempotencyKey
     ) {
+        return createPaymentOrder(memberId, planName, idempotencyKey, null);
+    }
+
+    public CreatePaymentResponse createPaymentOrder(
+            Long memberId,
+            String planName,
+            String idempotencyKey,
+            String memberAccessToken
+    ) {
+        // 1. Validate request.
         if (memberId == null || memberId <= 0) {
             throw new IllegalArgumentException("Invalid member ID");
         }
@@ -54,30 +76,51 @@ public class PaymentService {
             );
         }
 
-        var existing = paymentRepository.findByIdempotencyKey(idempotencyKey);
+        // 2. Check whether this request was already processed.
+        Payment existing = orderPersistenceService
+                .findByIdempotencyKey(idempotencyKey);
 
-        if (existing.isPresent()) {
-            Payment payment = existing.get();
+        if (existing != null) {
+            validateIdempotencyRequest(existing, memberId, planName);
 
-            if (!payment.getMemberId().equals(memberId)
-                    || !payment.getPlanName().equals(planName)) {
-                throw new IllegalArgumentException(
-                        "Idempotency key was already used for another request"
-                );
-            }
-
-            if (payment.getRazorpayOrderId() != null) {
-                return toCreatePaymentResponse(payment);
+            if (existing.getRazorpayOrderId() != null) {
+                return toCreatePaymentResponse(existing);
             }
 
             throw new IllegalStateException(
-                    "A payment request with this key is already being processed"
+                    "A payment request with this key is already being processed or needs recovery"
             );
         }
 
-        // The price must come from the trusted Membership Service catalogue.
-        long amountPaise =
-                membershipIntegrationService.getPlanAmountPaise(planName);
+        membershipIntegrationService.ensureMemberCanChangePlan(memberAccessToken);
+
+        // 3. Get the actual plan price from Membership Service.
+        long amountPaise = memberAccessToken == null
+                ? membershipIntegrationService.getPlanAmountPaise(planName)
+                : membershipIntegrationService.getPlanAmountPaise(
+                        planName,
+                        memberAccessToken
+                );
+
+        int durationMonths = membershipIntegrationService
+                .getPlanDurationMonths(planName, memberAccessToken);
+        paymentRepository
+                .findFirstByMemberIdAndPlanNameAndStatusAndVerifiedAtNotNullOrderByVerifiedAtDesc(
+                        memberId,
+                        planName,
+                        PaymentStatus.SUCCESS
+                )
+                .map(Payment::getVerifiedAt)
+                .map(verifiedAt -> verifiedAt.atZone(ZoneOffset.UTC)
+                        .toLocalDate().plusMonths(durationMonths))
+                .filter(validThrough -> !LocalDate.now(ZoneOffset.UTC)
+                        .isAfter(validThrough))
+                .ifPresent(validThrough -> {
+                    throw new IllegalStateException(
+                            "You already paid for this plan. Your access is covered through "
+                                    + validThrough + "."
+                    );
+                });
 
         if (amountPaise < 100) {
             throw new IllegalArgumentException(
@@ -85,52 +128,146 @@ public class PaymentService {
             );
         }
 
-        Payment payment = Payment.createNew();
-        payment.setMemberId(memberId);
-        payment.setPlanName(planName);
-        payment.setAmountPaise(amountPaise);
-        payment.setCurrency("INR");
-        payment.setStatus(PaymentStatus.CREATED);
-        payment.setIdempotencyKey(idempotencyKey);
-
-        payment = paymentRepository.saveAndFlush(payment);
+        // 4. Persist the initial payment in its own transaction.
+        Payment payment;
 
         try {
-            RazorpayService.RazorpayOrder order =
-                    razorpayService.createOrder(
-                            amountPaise,
-                            "gym-payment-" + payment.getId(),
-                            payment.getId()
-                    );
+            payment = orderPersistenceService.createPayment(
+                    memberId,
+                    planName,
+                    amountPaise,
+                    idempotencyKey
+            );
+        } catch (DataIntegrityViolationException exception) {
 
-            payment.setRazorpayOrderId(order.orderId());
-            payment.setStatus(PaymentStatus.PENDING);
+            // Another concurrent request may have inserted this key.
+            Payment concurrentPayment = orderPersistenceService
+                    .findByIdempotencyKey(idempotencyKey);
 
-            payment = paymentRepository.save(payment);
+            if (concurrentPayment == null) {
+                throw exception;
+            }
 
-            return toCreatePaymentResponse(payment);
+            validateIdempotencyRequest(
+                    concurrentPayment,
+                    memberId,
+                    planName
+            );
+
+            if (concurrentPayment.getRazorpayOrderId() != null) {
+                return toCreatePaymentResponse(concurrentPayment);
+            }
+
+            throw new IllegalStateException(
+                    "A payment request with this key is already being processed"
+            );
+        }
+
+        // 5. Call Razorpay OUTSIDE a database transaction.
+        RazorpayService.RazorpayOrder order;
+
+        try {
+            order = razorpayService.createOrder(
+                    amountPaise,
+                    "gym-payment-" + payment.getId(),
+                    payment.getId()
+            );
+
+            if (order == null
+                    || order.orderId() == null
+                    || order.orderId().isBlank()) {
+                throw new IllegalStateException(
+                        "Razorpay returned an invalid order"
+                );
+            }
+
         } catch (RuntimeException exception) {
-            payment.setStatus(PaymentStatus.FAILED);
-            payment.setFailureReason("Unable to create payment order");
-            paymentRepository.save(payment);
+
+            // A timeout or server-side transport failure may mean Razorpay
+            // created the order but the response was lost. Preserve CREATED
+            // for reconciliation instead of falsely recording a failure.
+            try {
+                if (exception instanceof PaymentProcessingException processing
+                        && processing.isOutcomeUnknown()) {
+                    orderPersistenceService.markOrderOutcomeUnknown(
+                            payment.getId(),
+                            "Razorpay order outcome is unknown; reconciliation is required"
+                    );
+                } else {
+                    orderPersistenceService.markOrderFailed(
+                            payment.getId(),
+                            exception.getMessage()
+                    );
+                }
+            } catch (RuntimeException persistenceException) {
+                exception.addSuppressed(persistenceException);
+            }
+
             throw exception;
+        }
+
+        // 7. Persist the successful Razorpay order independently.
+        // If this database update fails, leave the record CREATED for
+        // reconciliation rather than incorrectly marking it FAILED.
+        Payment updatedPayment;
+        try {
+            updatedPayment = orderPersistenceService.markOrderCreated(
+                    payment.getId(),
+                    order.orderId()
+            );
+        } catch (RuntimeException exception) {
+            try {
+                orderPersistenceService.markOrderOutcomeUnknown(
+                        payment.getId(),
+                        "Razorpay order was created but local persistence needs reconciliation"
+                );
+            } catch (RuntimeException persistenceException) {
+                exception.addSuppressed(persistenceException);
+            }
+            throw exception;
+        }
+
+        return toCreatePaymentResponse(updatedPayment);
+    }
+
+    private void validateIdempotencyRequest(
+            Payment payment,
+            Long memberId,
+            String planName
+    ) {
+        if (!payment.getMemberId().equals(memberId)
+                || !payment.getPlanName().equals(planName)) {
+            throw new IllegalArgumentException(
+                    "Idempotency key was already used for another request"
+            );
         }
     }
 
-    @Transactional
     public PaymentResponse verifyPayment(
             Long memberId,
             VerifyPaymentRequest request
     ) {
-        Payment payment = paymentRepository
-                .findByRazorpayOrderId(request.getRazorpayOrderId())
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Payment order not found"));
-
-        if (!payment.getMemberId().equals(memberId)) {
-            throw new IllegalArgumentException("Payment order not found");
+        if (memberId == null || memberId <= 0 || request == null) {
+            throw new IllegalArgumentException(
+                    "Invalid payment verification request"
+            );
         }
 
+        // Read first, then perform network calls without holding a database
+        // transaction or row lock. Finalization rechecks state under a lock.
+        Payment payment = paymentRepository
+                .findByRazorpayOrderId(request.getRazorpayOrderId())
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "Payment order was not found"
+                ));
+
+        if (!payment.getMemberId().equals(memberId)) {
+            throw new PaymentNotFoundException(
+                    "Payment order was not found"
+            );
+        }
+
+        // Idempotent verification.
         if (payment.getStatus() == PaymentStatus.SUCCESS) {
             if (request.getRazorpayPaymentId()
                     .equals(payment.getRazorpayPaymentId())) {
@@ -148,6 +285,7 @@ public class PaymentService {
             );
         }
 
+        // Verify checkout signature.
         boolean validSignature =
                 razorpayService.verifyPaymentSignature(
                         payment.getRazorpayOrderId(),
@@ -161,19 +299,49 @@ public class PaymentService {
             );
         }
 
-        payment.setRazorpayPaymentId(request.getRazorpayPaymentId());
-        payment.setStatus(PaymentStatus.SUCCESS);
-        payment.setVerifiedAt(Instant.now());
+        // Independently retrieve payment details from Razorpay.
+        RazorpayService.RazorpayPayment gatewayPayment =
+                razorpayService.fetchPaymentDetails(
+                        request.getRazorpayPaymentId()
+                );
 
-        return toPaymentResponse(paymentRepository.save(payment));
+        // Verify the returned payment against the stored order.
+        if (gatewayPayment == null
+                || !request.getRazorpayPaymentId().equals(gatewayPayment.paymentId())
+                || !payment.getRazorpayOrderId().equals(gatewayPayment.orderId())
+                || !payment.getAmountPaise().equals(gatewayPayment.amountPaise())
+                || !payment.getCurrency().equals(gatewayPayment.currency())) {
+            throw new IllegalArgumentException(
+                    "Razorpay payment details do not match the stored order"
+            );
+        }
+
+        if (!"captured".equalsIgnoreCase(gatewayPayment.status())) {
+            throw new IllegalStateException(
+                    "Payment has not been captured yet. Await payment confirmation."
+            );
+        }
+
+        Long membershipId = membershipIntegrationService.activatePaidMembership(
+                payment.getId(), memberId, payment.getPlanName());
+        return toPaymentResponse(orderPersistenceService.markPaymentSuccessful(
+                memberId,
+                payment.getRazorpayOrderId(),
+                gatewayPayment,
+                membershipId
+        ));
     }
 
     @Transactional(readOnly = true)
-    public PaymentResponse getPayment(Long memberId, Long paymentId) {
+    public PaymentResponse getPayment(
+            Long memberId,
+            Long paymentId
+    ) {
         Payment payment = paymentRepository
                 .findByIdAndMemberId(paymentId, memberId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Payment not found"));
+                .orElseThrow(() -> new PaymentNotFoundException(
+                        "Payment was not found"
+                ));
 
         return toPaymentResponse(payment);
     }
@@ -182,9 +350,11 @@ public class PaymentService {
     public Page<PaymentResponse> getPaymentHistory(
             Long memberId,
             int page,
-            int size
+            int size,
+            String memberAccessToken
     ) {
-        if (page < 0 || size < 1 || size > 100) {
+        if (memberId == null || memberId <= 0
+                || page < 0 || size < 1 || size > 100) {
             throw new IllegalArgumentException(
                     "Invalid pagination parameters"
             );
@@ -192,18 +362,47 @@ public class PaymentService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        return paymentRepository
-                .findByMemberIdOrderByCreatedAtDesc(memberId, pageable)
+        Page<Payment> history = paymentRepository.findByMemberIdOrderByCreatedAtDesc(memberId, pageable);
+        restoreLatestPaidMembership(memberId, memberAccessToken, history.getContent());
+        return paymentRepository.findByMemberIdOrderByCreatedAtDesc(memberId, pageable)
                 .map(this::toPaymentResponse);
     }
 
-    private CreatePaymentResponse toCreatePaymentResponse(Payment payment) {
+    private void restoreLatestPaidMembership(Long memberId, String memberAccessToken, List<Payment> payments) {
+        if (payments.stream().anyMatch(payment -> payment.getMembershipId() != null)) return;
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        Payment candidate = null;
+        LocalDate candidateEnd = null;
+        for (Payment payment : payments) {
+            if (payment.getStatus() != PaymentStatus.SUCCESS || payment.getVerifiedAt() == null) continue;
+            int duration = membershipIntegrationService.getPlanDurationMonths(payment.getPlanName(), memberAccessToken);
+            LocalDate start = payment.getVerifiedAt().atZone(ZoneOffset.UTC).toLocalDate();
+            LocalDate end = start.plusMonths(duration);
+            if (!end.isBefore(today) && (candidateEnd == null || end.isAfter(candidateEnd))) {
+                candidate = payment;
+                candidateEnd = end;
+            }
+        }
+        if (candidate == null) return;
+        try {
+            Long membershipId = membershipIntegrationService.activatePaidMembership(
+                    candidate.getId(), memberId, candidate.getPlanName());
+            orderPersistenceService.linkMembership(candidate.getId(), membershipId);
+        } catch (RuntimeException exception) {
+            log.warn("Could not restore membership for verified payment; paymentId={}, errorType={}",
+                    candidate.getId(), exception.getClass().getSimpleName());
+        }
+    }
+
+    private CreatePaymentResponse toCreatePaymentResponse(
+            Payment payment
+    ) {
         return new CreatePaymentResponse(
                 payment.getId(),
                 payment.getRazorpayOrderId(),
                 payment.getAmountPaise(),
                 payment.getCurrency(),
-                getRazorpayKeyId(),
+                membershipIntegrationService.getRazorpayKeyId(),
                 payment.getPlanName(),
                 payment.getStatus().name()
         );
@@ -224,10 +423,5 @@ public class PaymentService {
                 payment.getUpdatedAt(),
                 payment.getVerifiedAt()
         );
-    }
-
-    private String getRazorpayKeyId() {
-        // The public Key ID is safe to return to the checkout frontend.
-        return membershipIntegrationService.getRazorpayKeyId();
     }
 }

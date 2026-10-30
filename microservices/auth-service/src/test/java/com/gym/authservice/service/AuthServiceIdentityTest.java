@@ -2,55 +2,56 @@ package com.gym.authservice.service;
 
 import com.gym.authservice.client.MemberServiceClient;
 import com.gym.authservice.dto.AuthResponse;
-import com.gym.authservice.dto.MemberProfileRequest;
-import com.gym.authservice.dto.LoginRequest;
-import com.gym.authservice.dto.RegisterRequest;
+import com.gym.authservice.dto.MemberRegistrationMatch;
 import com.gym.authservice.entity.Account;
+import com.gym.authservice.entity.MemberRegistrationChallenge;
 import com.gym.authservice.repository.AccountRepository;
+import com.gym.authservice.repository.MemberRegistrationChallengeRepository;
+import java.time.Instant;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.server.ResponseStatusException;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class AuthServiceIdentityTest {
-    @Test void registrationKeepsAccountIdSeparateAndRetryUsesSameRegistrationKey() {
-        AccountRepository accounts=mock(AccountRepository.class);
-        PasswordEncoder passwords=mock(PasswordEncoder.class);
-        JwtService jwt=mock(JwtService.class);
-        MemberServiceClient members=mock(MemberServiceClient.class);
-        AtomicReference<Account> stored=new AtomicReference<>();
-        when(accounts.findByEmailIgnoreCase("member@example.com")).thenAnswer(call->Optional.ofNullable(stored.get()));
-        when(accounts.saveAndFlush(any(Account.class))).thenAnswer(call->{Account account=call.getArgument(0);if(account.getId()==null)account.setId(18L);stored.set(account);return account;});
+    @Test
+    void verifiedRegistrationLinksTheExistingMemberProfile() {
+        AccountRepository accounts = mock(AccountRepository.class);
+        PasswordEncoder passwords = mock(PasswordEncoder.class);
+        JwtService jwt = mock(JwtService.class);
+        MemberServiceClient members = mock(MemberServiceClient.class);
+        MemberRegistrationChallengeRepository challenges = mock(MemberRegistrationChallengeRepository.class);
+        ObjectProvider<JavaMailSender> mailSenders = mock(ObjectProvider.class);
+        String email = "member@example.com";
+        MemberRegistrationMatch member = new MemberRegistrationMatch(42L, "Member", email, "9876543210");
+        MemberRegistrationChallenge challenge = new MemberRegistrationChallenge(
+                email, member.id(), "hashed-code", Instant.now().plusSeconds(600));
+
+        when(members.findMemberForRegistration(email)).thenReturn(member);
+        when(challenges.findById(email)).thenReturn(Optional.of(challenge));
+        when(passwords.matches("123456", "hashed-code")).thenReturn(true);
         when(passwords.encode("strong-password")).thenReturn("hashed-password");
-        when(passwords.matches("strong-password","hashed-password")).thenReturn(true);
+        when(accounts.existsByEmailIgnoreCase(email)).thenReturn(false);
+        when(accounts.saveAndFlush(any(Account.class))).thenAnswer(call -> {
+            Account account = call.getArgument(0);
+            account.setId(18L);
+            return account;
+        });
         when(jwt.generateToken(any(Account.class))).thenReturn("signed-token");
-        when(members.createMemberProfile(any(MemberProfileRequest.class),anyString()))
-                .thenThrow(new IllegalStateException("temporary downstream failure"))
-                .thenReturn(42L);
-        AuthService service=new AuthService(accounts,passwords,jwt,members);
-        RegisterRequest registration=new RegisterRequest();registration.setName("Member");registration.setEmail("member@example.com");registration.setPassword("strong-password");
-        MemberProfileRequest profile=new MemberProfileRequest();profile.setEmail("member@example.com");
 
-        ResponseStatusException first=assertThrows(ResponseStatusException.class,()->service.register(registration,profile));
-        assertEquals(503,first.getStatusCode().value());
-        String retryKey=stored.get().getRegistrationKey();
-        assertEquals("PENDING",stored.get().getStatus());
+        AuthService service = new AuthService(accounts, passwords, jwt, members, challenges,
+                mailSenders, "", "", 10);
+        AuthResponse response = service.completeMemberRegistration(email, "123456", "strong-password");
 
-        AuthResponse response=service.register(registration,profile);
-        assertEquals(18L,response.getAccountId());
-        assertEquals(42L,response.getMemberId());
-        assertEquals("ACTIVE",stored.get().getStatus());
-        assertEquals(42L,stored.get().getMemberId());
-        verify(members,times(2)).createMemberProfile(any(MemberProfileRequest.class),eq(retryKey));
-        LoginRequest login=new LoginRequest();login.setEmail("member@example.com");login.setPassword("strong-password");
-        AuthResponse loggedIn=service.login(login);
-        assertEquals(18L,loggedIn.getAccountId());
-        assertEquals(42L,loggedIn.getMemberId());
-        ResponseStatusException duplicate=assertThrows(ResponseStatusException.class,()->service.register(registration,profile));
-        assertEquals(409,duplicate.getStatusCode().value());        verify(accounts,never()).deleteById(anyLong());
+        assertEquals(18L, response.getAccountId());
+        assertEquals(42L, response.getMemberId());
+        assertEquals("MEMBER", response.getRole());
+        verify(challenges).delete(challenge);
     }
 }
