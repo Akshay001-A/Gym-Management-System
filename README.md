@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:145a3a,50:21855b,100:b8dfc4&height=240&section=header&text=Form%20%26%20Fit%20Gym%20Management&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=40" width="100%" alt="Form & Fit Gym Management header"/>
+<img src="frontend/public/images/form-fit-gym-logo.svg" width="280" alt="Form & Fit Fitness Club logo"/>
 
 # 🏋️ Form & Fit Gym Management System
 
@@ -46,9 +46,9 @@ Form & Fit is a gym management application with two generations. Version 1 is th
 
 <p align="center"><img src="frontend/public/images/form-fit-v2-admin-dashboard.png" width="100%" alt="Form & Fit administrator dashboard"/><br/><em>Administrator workspace</em></p>
 
-<p align="center"><img src="frontend/public/images/form-fit-v2-member-dashboard.png" width="82%" alt="Form & Fit member portal"/><br/><em>Member portal and active membership</em></p>
+<p align="center"><img src="frontend/public/images/form-fit-v2-member-dashboard.png" width="100%" alt="Form & Fit member portal"/><br/><em>Member portal and active membership</em></p>
 
-<p align="center"><img src="frontend/public/images/form-fit-v2-sign-in.png" width="82%" alt="Form & Fit sign-in page"/><br/><em>Sign in and member account access</em></p>
+<p align="center"><img src="frontend/public/images/form-fit-v2-sign-in.png" width="100%" alt="Form & Fit sign-in page"/><br/><em>Sign in and member account access</em></p>
 
 ## 🧭 Version 2 services
 
