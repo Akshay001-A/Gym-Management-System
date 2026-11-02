@@ -253,10 +253,7 @@ public class AuthService {
                     "Your gym profile does not have an email address. Contact the gym administrator to add one.");
         }
         String email = member.email().trim().toLowerCase(Locale.ROOT);
-        if (accountRepository.existsByEmailIgnoreCase(email)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "A member account already exists. Please sign in.");
-        }
+        ensureRegistrationEmailCanBeUsed(email, member.id(), false);
         if (mailHost == null || mailHost.isBlank() || mailFrom == null || mailFrom.isBlank()
                 || mailSenderProvider.getIfAvailable() == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
@@ -265,6 +262,10 @@ public class AuthService {
 
         Instant now = Instant.now();
         MemberRegistrationChallenge previous = challengeRepository.findById(email).orElse(null);
+        if (previous != null && !previous.getMemberId().equals(member.id())) {
+            challengeRepository.delete(previous);
+            previous = null;
+        }
         if (previous != null && previous.getCreatedAt().isAfter(now.minusSeconds(60))) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Please wait one minute before requesting another verification code.");
@@ -292,6 +293,7 @@ public class AuthService {
                 "A verification code was sent to the email on your gym profile.");
     }
 
+    @Transactional
     public AuthResponse completeMemberRegistration(String identifier, String code, String password) {
         MemberRegistrationMatch member = findMember(identifier);
         String email = member.email() == null ? "" : member.email().trim().toLowerCase(Locale.ROOT);
@@ -317,11 +319,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "That verification code is incorrect. Check the email and try again.");
         }
-        if (accountRepository.existsByEmailIgnoreCase(email)) {
-            challengeRepository.delete(challenge);
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "A member account already exists. Please sign in.");
-        }
+        ensureRegistrationEmailCanBeUsed(email, member.id(), true);
         Account account = new Account(member.name(), email, passwordEncoder.encode(password), "MEMBER");
         account.setMemberId(member.id());
         account.setStatus("ACTIVE");
@@ -333,6 +331,45 @@ public class AuthService {
         }
         challengeRepository.delete(challenge);
         return issueResponse(account);
+    }
+
+    /**
+     * Allows a gym profile to reuse an email from a deleted member account only
+     * after the new profile's email verification code has been confirmed.
+     */
+    private void ensureRegistrationEmailCanBeUsed(String email, Long newMemberId, boolean removeOrphan) {
+        Account existing = accountRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (existing == null) return;
+
+        Long previousMemberId = existing.getMemberId();
+        if (!"MEMBER".equalsIgnoreCase(existing.getRole()) || previousMemberId == null
+                || previousMemberId.equals(newMemberId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A member account already exists. Please sign in.");
+        }
+
+        final boolean oldProfileExists;
+        try {
+            oldProfileExists = memberServiceClient.memberProfileExists(previousMemberId);
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "We could not verify the previous gym account. Please try again later.");
+        }
+        if (oldProfileExists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A member account already exists. Please sign in.");
+        }
+
+        if (removeOrphan) {
+            accountRepository.delete(existing);
+            accountRepository.flush();
+            if (passwordResetChallengeRepository != null) {
+                passwordResetChallengeRepository.deleteById(email);
+            }
+            if (emailChangeChallengeRepository != null) {
+                emailChangeChallengeRepository.deleteById(existing.getId());
+            }
+        }
     }
 
     public RegistrationCodeResponse requestPasswordResetCode(String rawEmail) {

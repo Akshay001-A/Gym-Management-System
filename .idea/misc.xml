@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_26" project-jdk-name="JavaSE-21" project-jdk-type="JavaSDK">
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/microservices/payment-service/pom.xml" />
+        <option value="$PROJECT_DIR$/microservices/membership-service/pom.xml" />
+        <option value="$PROJECT_DIR$/microservices/api-gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/microservices/auth-service/pom.xml" />
+        <option value="$PROJECT_DIR$/microservices/member-service/pom.xml" />
+        <option value="$PROJECT_DIR$/microservices/trainer-service/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" project-jdk-name="25" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/classes" />
   </component>
 </project>
