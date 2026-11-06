@@ -17,6 +17,7 @@ import AuthGate from './components/AuthGate.jsx'
 import './styles/auth.css'
 import './styles/member-portal.css'
 import './styles/payments.css'
+import './styles/attendance.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

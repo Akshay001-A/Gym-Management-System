@@ -7,9 +7,10 @@ import {
 import PaymentCenter from './PaymentCenter'
 import { getPaymentHistory } from '../api/payments'
 import { completeMemberEmailChange, requestMemberEmailChangeCode } from '../api/auth'
+import MemberAttendance from './MemberAttendance'
 
 const emptyProfile = { name: '', age: '', mobile: '', email: '', gender: '', fatherName: '' }
-const pages = { home: 'Overview', memberships: 'My Memberships', trainers: 'Trainers', payments: 'Payments', profile: 'My Profile' }
+const pages = { home: 'Overview', memberships: 'My Memberships', trainers: 'Trainers', attendance: 'Attendance', payments: 'Payments', profile: 'My Profile' }
 
 function ProfileField({ icon: Icon, label, value }) {
   return <div className="member-profile-field"><span className="member-profile-field-icon"><Icon size={17} /></span><div><dt>{label}</dt><dd>{value || '—'}</dd></div></div>
@@ -229,6 +230,7 @@ export default function MemberPortal({ session, onLogout, onSessionUpdated }) {
           </>}
           {page === 'memberships' && <section className="member-panel"><div className="member-section-heading"><div><h2>My memberships</h2><p>Memberships are tied to your member profile.</p></div></div>{memberships.length ? <MembershipList items={memberships} busy={busy} onCancel={cancelMembership} onPay={payMembership} /> : <p className="member-empty">No membership records yet.</p>}</section>}
           {page === 'trainers' && <section className="member-panel"><div className="member-section-heading"><div><h2>Trainers</h2><p>Trainer directory from the Trainer Service.</p></div></div><TrainerList trainers={trainers} /></section>}
+          {page === 'attendance' && <MemberAttendance />}
           {page === 'payments' && <PaymentCenter initialPlan={selectedPaymentPlan} session={session} onPlanConsumed={clearSelectedPaymentPlan} onMembershipUpdated={refreshMemberships} hasCurrentMembership={Boolean(currentMembership)} />}
           {page === 'profile' && <section className="member-panel member-profile-panel">
             <div className="member-section-heading"><div><p className="member-profile-kicker">ACCOUNT DETAILS</p><h2>My profile</h2><p>Keep your contact details and gym preferences up to date.</p></div>{!editing && <button className="member-profile-edit-button" type="button" onClick={() => setEditing(true)}><UserRound size={16} /> Edit profile</button>}</div>

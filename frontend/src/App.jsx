@@ -10,6 +10,7 @@ import TrainersPage from './components/TrainersPage'
 import SettingsPage from './components/SettingsPage'
 import HelpSupportPage from './components/HelpSupportPage'
 import RevenuePage from './components/RevenuePage'
+import AttendancePage from './components/AttendancePage'
 import { createMember, deleteMember, getMember, getMembersPage, searchMembers, updateMember } from './api/members'
 import { getOverviewCounts } from './api/overview'
 import { assignMembershipPlan } from './api/memberships'
@@ -244,6 +245,8 @@ export default function App() {
         {page === 'Trainers' && <TrainersPage setNotice={setNotice} />}
 
         {page === 'Revenue' && <RevenuePage />}
+
+        {page === 'Attendance' && <AttendancePage />}
 
         {page === 'Settings' && <SettingsPage compactTables={compactTables} onCompactTablesChange={changeCompactTables} />}
 

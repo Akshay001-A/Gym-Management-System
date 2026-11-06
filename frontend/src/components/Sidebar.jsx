@@ -1,6 +1,6 @@
 import {
   ChevronDown, CircleHelp, CreditCard, Dumbbell, LayoutDashboard,
-  Settings, ShieldCheck, Users, X, Activity,
+  Settings, ShieldCheck, Users, X, Activity, QrCode,
 } from "lucide-react";
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { label: "Memberships", icon: CreditCard },
   { label: "Trainers", icon: Dumbbell },
   { label: "Revenue", icon: Activity },
+  { label: "Attendance", icon: QrCode },
 ];
 
 export default function Sidebar({ page, membersCount, mobileNav, setMobileNav, navigate }) {
