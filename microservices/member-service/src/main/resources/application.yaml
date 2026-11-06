@@ -37,3 +37,7 @@ app:
     secret: ${JWT_SECRET:}
   internal-service:
     key: ${INTERNAL_SERVICE_KEY:}
+  attendance:
+    qr-token-ttl-seconds: ${ATTENDANCE_QR_TOKEN_TTL_SECONDS:90}
+    scan-cooldown-seconds: ${ATTENDANCE_SCAN_COOLDOWN_SECONDS:5}
+    time-zone: ${ATTENDANCE_TIME_ZONE:Asia/Kolkata}

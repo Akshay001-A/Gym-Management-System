@@ -2,7 +2,11 @@
 package com.gym.memberservice.repository;
 
 import com.gym.memberservice.entity.Member;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
@@ -18,4 +22,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByEmailIgnoreCase(String email);
 
     Optional<Member> findByRegistrationKey(String registrationKey);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select member from Member member where member.id = :memberId")
+    Optional<Member> findForAttendanceUpdate(@Param("memberId") Long memberId);
 }
