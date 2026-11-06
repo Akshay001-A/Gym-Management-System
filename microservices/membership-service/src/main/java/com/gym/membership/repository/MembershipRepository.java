@@ -30,4 +30,10 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
     @Modifying
     @Query("update Membership m set m.status = 'EXPIRED' where m.status = 'ACTIVE' and m.endDate < :today")
     int expireActiveMemberships(@Param("today") LocalDate today);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Membership m set m.status = 'CANCELLED' where m.id = :membershipId "
+            + "and m.memberId = :memberId and m.status in ('ACTIVE', 'PENDING_PAYMENT')")
+    int cancelActiveMembershipForMember(@Param("memberId") Long memberId,
+            @Param("membershipId") Long membershipId);
 }

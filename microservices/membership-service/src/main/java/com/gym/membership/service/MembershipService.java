@@ -209,15 +209,16 @@ public class MembershipService {
 
     @Transactional
     public Membership cancelMembershipForMember(Long memberId, Long membershipId) {
-        Membership membership = getMembershipById(membershipId);
-        if (!membership.getMemberId().equals(memberId)) {
-            throw new MembershipNotFoundException(membershipId);
+        int updated = membershipRepository.cancelActiveMembershipForMember(memberId, membershipId);
+        if (updated == 0) {
+            Membership membership = getMembershipById(membershipId);
+            if (!membership.getMemberId().equals(memberId)) {
+                throw new MembershipNotFoundException(membershipId);
+            }
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only active or awaiting-payment memberships can be cancelled");
         }
-        if (!ACTIVE.equals(membership.getStatus()) && !"PENDING_PAYMENT".equals(membership.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active or awaiting-payment memberships can be cancelled");
-        }
-        membership.setStatus("CANCELLED");
-        return membershipRepository.save(membership);
+        return getMembershipById(membershipId);
     }
 
     @Transactional(readOnly = true)
