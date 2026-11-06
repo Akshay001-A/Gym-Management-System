@@ -36,10 +36,10 @@ public class AttendanceReminderEmailService {
         MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
         helper.setFrom(mailFrom, "Form & Fit Club");
         helper.setTo(email);
-        helper.setSubject("We'd love to see you at Form & Fit");
+        helper.setSubject("A fresh start tomorrow at Form & Fit");
         helper.setText("Hi " + safeName(name) + ",\n\n"
-                + "We missed seeing you at Form & Fit yesterday. If you needed a rest day or couldn't make it, that's okay. "
-                + "When it works for you, we'd be happy to welcome you back. Small, steady steps can help build a routine.\n\n"
+                + "We missed seeing you at Form & Fit today. If you needed a rest day or couldn't make it, that's okay. "
+                + "Tomorrow is a fresh chance to come in, and we'll be happy to welcome you back whenever it works for you. Small, steady steps can help build a routine.\n\n"
                 + "Take care,\nForm & Fit Club\n\n"
                 + "This is an automated attendance reminder from your gym.", false);
         mailSender.send(message);

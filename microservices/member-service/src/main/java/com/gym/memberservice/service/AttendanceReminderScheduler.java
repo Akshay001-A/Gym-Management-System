@@ -27,17 +27,17 @@ public class AttendanceReminderScheduler {
         this.timeZone = ZoneId.of(timeZone);
     }
 
-    @Scheduled(cron = "0 0 21 * * *", zone = "${app.attendance.time-zone:Asia/Kolkata}")
-    public void sendYesterdayAbsenceReminders() {
+    @Scheduled(cron = "0 0 23 * * *", zone = "${app.attendance.time-zone:Asia/Kolkata}")
+    public void sendTodayAbsenceReminders() {
         if (!emailService.isConfigured()) {
             log.warn("Attendance reminder emails skipped because SMTP is not configured");
             return;
         }
 
-        LocalDate yesterday = LocalDate.now(timeZone).minusDays(1);
+        LocalDate today = LocalDate.now(timeZone);
         preferenceRepository.findAllByEnabledTrue().forEach(preference -> {
             try {
-                reminderService.sendIfAbsent(preference.getMemberId(), yesterday);
+                reminderService.sendIfAbsent(preference.getMemberId(), today);
             } catch (Exception exception) {
                 log.warn("Could not send attendance reminder; memberId={}, errorType={}",
                         preference.getMemberId(), exception.getClass().getSimpleName());
