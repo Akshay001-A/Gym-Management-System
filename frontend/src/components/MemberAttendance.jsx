@@ -3,9 +3,25 @@ import { Camera, Clock3, RefreshCw, ScanLine } from 'lucide-react'
 import { getMyAttendance, scanAttendanceQr } from '../api/attendance'
 
 function duration(seconds = 0) {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m`
+  const safeSeconds = Math.max(0, Math.floor(seconds))
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const remainingSeconds = safeSeconds % 60
+  if (hours) return `${hours}h ${minutes}m ${remainingSeconds}s`
+  if (minutes) return `${minutes}m ${remainingSeconds}s`
+  return `${remainingSeconds}s`
+}
+
+function gymDate(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(date)
+}
+
+function clockTime(value) {
+  return value ? new Date(value).toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }) : '—'
 }
 
 function explainAttendanceError(error) {
@@ -72,31 +88,50 @@ export default function MemberAttendance() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
+  const [now, setNow] = useState(Date.now())
+  const [dataLoadedAt, setDataLoadedAt] = useState(Date.now())
   const load = useCallback(async () => {
     setLoading(true); setError('')
-    try { setData(await getMyAttendance()) } catch (requestError) { setError(explainAttendanceError(requestError)) }
+    try {
+      const result = await getMyAttendance()
+      const receivedAt = Date.now()
+      setData(result)
+      setDataLoadedAt(receivedAt)
+      setNow(receivedAt)
+    } catch (requestError) { setError(explainAttendanceError(requestError)) }
     finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (!data?.currentlyInside) return undefined
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [data?.currentlyInside])
   const handleScan = useCallback(async (payload) => {
     if (!payload || busy) return
     setCameraOpen(false)
     setBusy(true); setMessage(''); setError('')
     try {
       const result = await scanAttendanceQr(payload.trim())
-      setMessage(result.action === 'CHECK_IN' ? 'Checked in. Have a good workout!' : 'Checked out. Your visit time has been saved.')
+      setMessage(result.action === 'CHECKED_IN' ? 'Checked in. Have a good workout!' : 'Checked out. Your visit time has been saved.')
       setCameraOpen(false); await load()
     } catch (requestError) { setError(explainAttendanceError(requestError)) }
     finally { setBusy(false) }
   }, [busy, load])
   const visits = data?.visits ?? []
+  const liveDeltaSeconds = data?.currentlyInside ? Math.max(0, Math.floor((now - dataLoadedAt) / 1000)) : 0
+  const todaySummary = data?.days?.find((day) => day.date === gymDate())
+  const todayTotalSeconds = (todaySummary?.totalDurationSeconds ?? 0) + liveDeltaSeconds
+  const dailySummaries = (data?.days ?? []).filter((day) => day.visitCount > 0 || day.totalDurationSeconds > 0).slice().reverse()
+  const totalRangeSeconds = (data?.totalDurationSeconds ?? 0) + liveDeltaSeconds
   return <section className="member-panel member-attendance-panel">
     <div className="member-section-heading"><div><h2>Gym attendance</h2><p>Scan the entrance QR when you arrive and scan again when you leave.</p></div><button className="member-profile-edit-button" type="button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
-    {data && <div className="attendance-member-summary"><article><span><Clock3 size={17} /></span><small>TODAY’S TOTAL</small><strong>{duration(data.totalDurationSeconds)}</strong></article><article><span><ScanLine size={17} /></span><small>VISIT STATUS</small><strong>{data.currentlyInside ? 'Checked in' : 'Checked out'}</strong></article>{data.currentCheckInAt && <article><span><Camera size={17} /></span><small>CHECKED IN AT</small><strong>{new Date(data.currentCheckInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></article>}</div>}
+    {data && <div className="attendance-member-summary"><article><span><Clock3 size={17} /></span><small>TODAY’S TOTAL</small><strong>{duration(todayTotalSeconds)}</strong></article><article><span><ScanLine size={17} /></span><small>VISIT STATUS</small><strong>{data.currentlyInside ? 'Checked in' : 'Checked out'}</strong></article>{data.currentCheckInAt && <article><span><Camera size={17} /></span><small>CHECKED IN AT</small><strong>{clockTime(data.currentCheckInAt)}</strong></article>}</div>}
     <div className="attendance-member-actions"><button type="button" onClick={() => setCameraOpen((open) => !open)} disabled={busy}><Camera size={17} /> {cameraOpen ? 'Camera open' : 'Scan gym QR'}</button></div>
     {cameraOpen && <CameraScanner onScan={handleScan} onClose={() => setCameraOpen(false)} />}
     {message && <div className="attendance-success" role="status">{message}</div>}{error && <div className="member-error" role="alert">{error}</div>}
     <div className="attendance-history-heading"><h3>Recent visits</h3><span>Last 30 days</span></div>
-    {loading ? <div className="member-loading">Loading your attendance…</div> : visits.length ? <div className="member-table-scroll"><table><thead><tr><th>Date</th><th>Arrived</th><th>Left</th><th>Time inside</th><th>Status</th></tr></thead><tbody>{visits.map((visit) => <tr key={visit.visitId}><td>{new Date(visit.checkInAt).toLocaleDateString()}</td><td>{new Date(visit.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td>{visit.checkOutAt ? new Date(visit.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td><td>{duration(visit.durationSeconds)}</td><td>{visit.currentlyInside ? 'Inside now' : 'Complete'}</td></tr>)}</tbody></table></div> : <p className="member-empty">No gym visits yet. Scan the QR at the entrance to start your first visit.</p>}
+    {loading ? <div className="member-loading">Loading your attendance…</div> : visits.length ? <div className="member-table-scroll"><table><thead><tr><th>Date</th><th>Arrived</th><th>Left</th><th>Time inside</th><th>Status</th></tr></thead><tbody>{visits.map((visit) => <tr key={visit.visitId}><td>{new Date(visit.checkInAt).toLocaleDateString()}</td><td>{clockTime(visit.checkInAt)}</td><td>{clockTime(visit.checkOutAt)}</td><td>{duration(visit.durationSeconds + (visit.currentlyInside ? liveDeltaSeconds : 0))}</td><td>{visit.currentlyInside ? 'Inside now' : 'Complete'}</td></tr>)}</tbody></table></div> : <p className="member-empty">No gym visits yet. Scan the QR at the entrance to start your first visit.</p>}
+    {!loading && dailySummaries.length > 0 && <section className="attendance-daily-totals"><div className="attendance-history-heading"><h3>Daily totals</h3><span>Total for each day · last 30 days</span></div><div className="member-table-scroll"><table><thead><tr><th>Date</th><th>Visits</th><th>Total time</th></tr></thead><tbody>{dailySummaries.map((day) => <tr key={day.date}><td>{new Date(`${day.date}T00:00:00`).toLocaleDateString()}</td><td>{day.visitCount}</td><td>{duration(day.totalDurationSeconds + (data.currentlyInside && day.date === gymDate() ? liveDeltaSeconds : 0))}</td></tr>)}<tr className="attendance-total-row"><td>Last 30 days total</td><td>—</td><td>{duration(totalRangeSeconds)}</td></tr></tbody></table></div></section>}
   </section>
 }
