@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Clock3, Mail, QrCode, RefreshCw, Search } from 'lucide-react'
-import { createAttendanceQrToken, getAdminAttendance, getAdminAttendanceCalendar, getAttendanceReminderSettings, updateAttendanceReminder } from '../api/attendance'
+import { Clock3, Mail, QrCode, RefreshCw, Search, Send } from 'lucide-react'
+import { createAttendanceQrToken, getAdminAttendance, getAdminAttendanceCalendar, getAttendanceReminderSettings, sendAttendanceReminderNow, updateAttendanceReminder } from '../api/attendance'
 import { AttendanceCalendar, getAttendancePeriod } from './AttendanceCalendar'
 import '../styles/attendance-calendar.css'
 
@@ -66,6 +66,8 @@ export default function AttendancePage() {
   const [reminderError, setReminderError] = useState('')
   const [reminderSearch, setReminderSearch] = useState('')
   const [savingReminderId, setSavingReminderId] = useState(null)
+  const [sendingReminderId, setSendingReminderId] = useState(null)
+  const [manualReminderFeedback, setManualReminderFeedback] = useState(null)
   const attendancePeriod = getAttendancePeriod(calendarView, date, today())
 
   const refreshQr = useCallback(async () => {
@@ -158,6 +160,18 @@ export default function AttendancePage() {
     finally { setSavingReminderId(null) }
   }
 
+  async function sendImmediateReminder(member) {
+    if (sendingReminderId != null) return
+    setSendingReminderId(member.memberId)
+    setManualReminderFeedback(null)
+    try {
+      await sendAttendanceReminderNow(member.memberId)
+      setManualReminderFeedback({ memberId: member.memberId, tone: 'success', message: `Email sent to ${member.name}.` })
+    } catch (requestError) {
+      setManualReminderFeedback({ memberId: member.memberId, tone: 'error', message: requestError.message })
+    } finally { setSendingReminderId(null) }
+  }
+
   const rows = result?.content ?? []
   const filteredReminderMembers = reminderMembers.filter((member) =>
     [member.name, member.email, member.memberId].some((value) => String(value ?? '').toLowerCase().includes(reminderSearch.trim().toLowerCase())),
@@ -204,13 +218,15 @@ export default function AttendancePage() {
         <div className="attendance-qr-footer"><span><Clock3 size={15} /> {secondsLeft ? `Refreshes in ${secondsLeft}s` : 'Preparing next code'}</span><button className="button button-secondary" type="button" onClick={refreshQr}><RefreshCw size={15} /> Refresh</button></div>
         {qrError && qr?.qrImageDataUrl && <p className="attendance-inline-error" role="alert">Could not refresh: {qrError}</p>}
       </section>
-      <section className="surface attendance-list-card"><div className="directory-toolbar"><div><h2>Attendance by member</h2><p>{calendarData ? `${presentCount} present · ${Math.max(0, totalMemberCount - presentCount)} absent on ${new Date(`${date}T00:00:00`).toLocaleDateString()}` : 'Loading daily attendance…'}</p></div><label className="attendance-date">Date<input type="date" value={date} max={today()} onChange={(event) => setDate(event.target.value)} /></label></div>
+      <section className="surface attendance-list-card"><div className="directory-toolbar"><div><h2>Attendance by member</h2><p>{calendarData ? `${presentCount} present · ${Math.max(0, totalMemberCount - presentCount)} absent on ${new Date(`${date}T00:00:00`).toLocaleDateString()} · immediate reminders are separate from the 11 p.m. automatic email` : 'Loading daily attendance…'}</p></div><label className="attendance-date">Date<input type="date" value={date} max={today()} onChange={(event) => setDate(event.target.value)} /></label></div>
         <div className="attendance-roster-summary"><strong>{calendarData ? presentCount : '—'} Present</strong><strong className="absent">{calendarData ? Math.max(0, totalMemberCount - presentCount) : '—'} Absent</strong><div className="attendance-roster-filters" role="group" aria-label="Filter attendance list">{[['all', 'All'], ['present', 'Present'], ['absent', 'Absent']].map(([key, label]) => <button type="button" key={key} className={rosterFilter === key ? 'active' : ''} aria-pressed={rosterFilter === key} onClick={() => setRosterFilter(key)}>{label}</button>)}</div><label className="search-box"><Search size={15} /><input aria-label="Search attendance members" value={rosterSearch} onChange={(event) => setRosterSearch(event.target.value)} placeholder="Search members…" /></label></div>
-        {calendarError || error ? <div className="member-error" role="alert">{calendarError || error}<button className="button button-secondary" onClick={() => { setError(''); setReload((value) => value + 1) }}>Retry</button></div> : loading || calendarLoading ? <div className="loading-state">Loading member attendance…</div> : attendanceRows.length ? <div className="member-table-scroll"><table className="attendance-roster-table"><thead><tr><th>Member</th><th>Attendance</th><th>Visits</th><th>Total time</th><th>Daily usage</th><th>Details</th></tr></thead><tbody>{attendanceRows.map((member) => {
+        {manualReminderFeedback && <div className={`attendance-manual-feedback ${manualReminderFeedback.tone}`} role="status">{manualReminderFeedback.message}</div>}
+        {calendarError || error ? <div className="member-error" role="alert">{calendarError || error}<button className="button button-secondary" onClick={() => { setError(''); setReload((value) => value + 1) }}>Retry</button></div> : loading || calendarLoading ? <div className="loading-state">Loading member attendance…</div> : attendanceRows.length ? <div className="member-table-scroll"><table className="attendance-roster-table"><thead><tr><th>Member</th><th>Attendance</th><th>Visits</th><th>Total time</th><th>Daily usage</th><th>Visits / reminder</th></tr></thead><tbody>{attendanceRows.map((member) => {
           const status = limitStatus(member.totalSeconds)
           const usage = Math.min(100, member.totalSeconds / 9000 * 100)
           const isExpanded = expandedMember === member.memberId
-          return <Fragment key={member.memberId}><tr><td><strong className="attendance-member-name">{member.name}</strong></td><td><span className={`attendance-status ${member.present ? 'present' : 'absent'}`}>{member.present ? 'Present' : 'Absent'}</span></td><td>{member.visitCount || '—'}</td><td><strong>{member.present ? duration(member.totalSeconds) : '—'}</strong></td><td>{member.present ? <div className="attendance-limit-cell"><div className="attendance-limit-track"><span className={status.tone} style={{ width: `${usage}%` }} /><i /></div><small>{duration(member.totalSeconds)} / 2h 30m</small></div> : '—'}</td><td>{member.present && <button className="attendance-detail-button" type="button" onClick={() => setExpandedMember(isExpanded ? null : member.memberId)}>{isExpanded ? 'Hide visits' : 'View visits'}</button>}</td></tr>
+          const emailAvailable = Boolean(reminderMembers.find((entry) => entry.memberId === member.memberId)?.email)
+          return <Fragment key={member.memberId}><tr><td><strong className="attendance-member-name">{member.name}</strong></td><td><span className={`attendance-status ${member.present ? 'present' : 'absent'}`}>{member.present ? 'Present' : 'Absent'}</span></td><td>{member.visitCount || '—'}</td><td><strong>{member.present ? duration(member.totalSeconds) : '—'}</strong></td><td>{member.present ? <div className="attendance-limit-cell"><div className="attendance-limit-track"><span className={status.tone} style={{ width: `${usage}%` }} /><i /></div><small>{duration(member.totalSeconds)} / 2h 30m</small></div> : '—'}</td><td>{member.present ? <button className="attendance-detail-button" type="button" onClick={() => setExpandedMember(isExpanded ? null : member.memberId)}>{isExpanded ? 'Hide visits' : 'View visits'}</button> : date === today() && <button className="attendance-send-reminder" type="button" aria-label={`Send attendance reminder to ${member.name}`} disabled={sendingReminderId != null || !emailConfigured || !emailAvailable} title={!emailAvailable ? 'This member has no email address' : !emailConfigured ? 'Email settings are not available' : ''} onClick={() => sendImmediateReminder(member)}>{sendingReminderId === member.memberId ? <RefreshCw size={13} className="attendance-send-spinner" /> : <Send size={13} />}{sendingReminderId === member.memberId ? 'Sending…' : manualReminderFeedback?.memberId === member.memberId && manualReminderFeedback.tone === 'success' ? 'Send again' : 'Send reminder'}</button>}</td></tr>
             {isExpanded && <tr className="attendance-expanded-row"><td colSpan="6"><div className="attendance-expanded-content"><h3>Visits for {member.name}</h3><div className="member-table-scroll"><table><thead><tr><th>Arrived</th><th>Left</th><th>Time inside</th><th>Status</th></tr></thead><tbody>{member.visits.map((visit) => <tr key={visit.visitId}><td>{visit.checkInAt ? new Date(visit.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td><td>{visit.checkOutAt ? new Date(visit.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td><td>{duration((visit.durationSeconds ?? 0) + (visit.currentlyInside ? Math.max(0, Math.floor((Date.now() - attendanceLoadedAt) / 1000)) : 0))}</td><td>{visit.currentlyInside ? 'Inside now' : 'Complete'}</td></tr>)}</tbody></table></div></div></td></tr>}</Fragment>
         })}</tbody></table></div> : <div className="attendance-empty">{totalMemberCount ? 'No members match this search.' : 'No members are registered yet.'}</div>}
       </section>

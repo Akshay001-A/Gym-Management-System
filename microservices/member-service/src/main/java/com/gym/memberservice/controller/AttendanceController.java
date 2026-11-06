@@ -5,6 +5,7 @@ import com.gym.memberservice.dto.AttendanceDtos.AdminAttendanceCalendar;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderMember;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderSettings;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderToggle;
+import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderDispatch;
 import com.gym.memberservice.dto.AttendanceDtos.MemberHistory;
 import com.gym.memberservice.dto.AttendanceDtos.QrTokenResponse;
 import com.gym.memberservice.dto.AttendanceDtos.ScanRequest;
@@ -91,6 +92,12 @@ public class AttendanceController {
     public AttendanceReminderMember updateAttendanceReminder(@PathVariable Long memberId,
             @Valid @RequestBody AttendanceReminderToggle request) {
         return attendanceReminderService.setEnabled(memberId, request.enabled());
+    }
+
+    @PostMapping("/attendance/reminders/{memberId}/send")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AttendanceReminderDispatch sendAttendanceReminderNow(@PathVariable Long memberId) throws Exception {
+        return attendanceReminderService.sendManualReminder(memberId);
     }
 
     private Long authenticatedMemberId(Jwt jwt) {

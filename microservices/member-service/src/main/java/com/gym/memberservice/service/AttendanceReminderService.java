@@ -2,6 +2,7 @@ package com.gym.memberservice.service;
 
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderMember;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderSettings;
+import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderDispatch;
 import com.gym.memberservice.entity.AttendanceReminderPreference;
 import com.gym.memberservice.entity.Member;
 import com.gym.memberservice.repository.AttendanceReminderPreferenceRepository;
@@ -64,6 +65,30 @@ public class AttendanceReminderService {
                 .orElseGet(() -> new AttendanceReminderPreference(memberId, false));
         preference.setEnabled(enabled);
         return toDto(member, preferenceRepository.save(preference));
+    }
+
+    @Transactional(readOnly = true)
+    public AttendanceReminderDispatch sendManualReminder(Long memberId) throws Exception {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member was not found"));
+        if (member.getEmail() == null || member.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This member does not have an email address");
+        }
+        if (!emailService.isConfigured()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Email reminders are unavailable because SMTP settings are not configured");
+        }
+
+        LocalDate today = LocalDate.now(timeZone);
+        Instant dayStart = today.atStartOfDay(timeZone).toInstant();
+        Instant dayEnd = today.plusDays(1).atStartOfDay(timeZone).toInstant();
+        if (!visitRepository.findOverlappingVisits(memberId, dayStart, dayEnd).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This member has already visited today. No reminder email was sent.");
+        }
+
+        emailService.sendReminder(member.getEmail(), member.getName());
+        return new AttendanceReminderDispatch(memberId, member.getName(), "Reminder email sent.");
     }
 
     @Transactional

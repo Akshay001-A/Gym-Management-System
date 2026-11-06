@@ -36,3 +36,7 @@ export function updateAttendanceReminder(memberId, enabled) {
     method: 'PUT', body: { enabled },
   })
 }
+
+export function sendAttendanceReminderNow(memberId) {
+  return apiRequest(`/members/attendance/reminders/${encodeURIComponent(memberId)}/send`, { method: 'POST' })
+}

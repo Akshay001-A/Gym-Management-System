@@ -45,4 +45,13 @@
 .attendance-roster-filters button.active{color:#176342;background:#e8f4eb;border-color:#cce3d1}
 .attendance-roster-table .attendance-status.absent{color:#81504c;background:#f8efed}
 .attendance-roster-table .attendance-status.present{color:#176342;background:#e3f3e8}
+.attendance-send-reminder{min-height:30px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 9px;color:#176342;background:#f0f8f1;border:1px solid #cfe5d3;border-radius:8px;font:700 9px Manrope,sans-serif;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s}
+.attendance-send-reminder:hover:not(:disabled){background:#e3f3e7;border-color:#acd2b5}
+.attendance-send-reminder:focus-visible{outline:3px solid #b4d7bc;outline-offset:2px}
+.attendance-send-reminder:disabled{color:#98a69b;background:#f6f8f6;border-color:#e4eae4;cursor:not-allowed}
+.attendance-send-spinner{animation:attendance-spin .9s linear infinite}
+.attendance-manual-feedback{margin:0 0 12px;padding:9px 12px;border:1px solid;border-radius:8px;font-size:10px;line-height:1.4}
+.attendance-manual-feedback.success{color:#176342;background:#edf7ef;border-color:#cfe7d3}
+.attendance-manual-feedback.error{color:#9d413c;background:#fff2f0;border-color:#f1d2cf}
+@keyframes attendance-spin{to{transform:rotate(360deg)}}
 @media(max-width:680px){.attendance-calendar-toolbar{display:grid}.attendance-calendar-controls{width:100%;grid-template-columns:1fr auto;align-items:center;justify-items:stretch}.attendance-view-switch{justify-self:start}.attendance-period-nav{justify-self:end}.attendance-month-grid{gap:4px}.attendance-month-day{min-height:55px;padding:6px}.attendance-month-day.selected{padding:5px}.attendance-calendar-footer{align-items:flex-start;flex-direction:column}.attendance-roster-filters{margin-left:0}.attendance-calendar-card{padding:15px}}

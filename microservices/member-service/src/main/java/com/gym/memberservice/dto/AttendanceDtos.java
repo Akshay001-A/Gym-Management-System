@@ -39,6 +39,8 @@ public final class AttendanceDtos {
 
     public record AttendanceReminderToggle(@NotNull Boolean enabled) {}
 
+    public record AttendanceReminderDispatch(Long memberId, String memberName, String message) {}
+
     public record AdminAttendanceCalendar(LocalDate from, LocalDate to,
             List<AdminAttendanceCalendarMember> members) {}
 
