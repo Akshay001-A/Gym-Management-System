@@ -54,7 +54,7 @@ services:
     env_file:
       - .env
     environment:
-      AUTH_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_auth_db
+      AUTH_DB_URL: ${AUTH_DB_URL}
       MEMBER_SERVICE_URL: http://member-service:8081
     expose:
       - "8085"
@@ -74,7 +74,7 @@ services:
     env_file:
       - .env
     environment:
-      MEMBER_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_member_db
+      MEMBER_DB_URL: ${MEMBER_DB_URL}
     expose:
       - "8081"
     restart: unless-stopped
@@ -93,7 +93,7 @@ services:
     env_file:
       - .env
     environment:
-      MEMBERSHIP_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_membership_db
+      MEMBERSHIP_DB_URL: ${MEMBERSHIP_DB_URL}
       MEMBER_SERVICE_URL: http://member-service:8081
     expose:
       - "8082"
@@ -113,7 +113,7 @@ services:
     env_file:
       - .env
     environment:
-      TRAINER_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_trainer_db
+      TRAINER_DB_URL: ${TRAINER_DB_URL}
     expose:
       - "8084"
     restart: unless-stopped
@@ -132,7 +132,7 @@ services:
     env_file:
       - .env
     environment:
-      PAYMENT_DB_URL: jdbc:postgresql://host.docker.internal:5432/gym_payment_db
+      PAYMENT_DB_URL: ${PAYMENT_DB_URL}
       MEMBERSHIP_SERVICE_URL: http://membership-service:8082
       MEMBER_SERVICE_URL: http://member-service:8081
     ports:
