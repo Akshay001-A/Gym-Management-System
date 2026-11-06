@@ -17,39 +17,51 @@ function explainAttendanceError(error) {
 
 function CameraScanner({ onScan, onClose }) {
   const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const timerRef = useRef(null)
+  const controlsRef = useRef(null)
+  const onScanRef = useRef(onScan)
+  const scanHandledRef = useRef(false)
   const [cameraError, setCameraError] = useState('')
+  useEffect(() => { onScanRef.current = onScan }, [onScan])
   useEffect(() => {
     let active = true
     async function start() {
       try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable. Use the code entry below.')
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
-        if (!active) { stream.getTracks().forEach((track) => track.stop()); return }
-        streamRef.current = stream
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        if (!('BarcodeDetector' in window)) throw new Error('This browser cannot read QR codes with its camera. Enter the code manually below.')
-        const detector = new window.BarcodeDetector({ formats: ['qr_code'] })
-        const scan = async () => {
-          if (!active || !videoRef.current) return
-          try {
-            const codes = await detector.detect(videoRef.current)
-            if (codes[0]?.rawValue) { onScan(codes[0].rawValue); return }
-          } catch { /* Continue scanning the next camera frame. */ }
-          timerRef.current = window.setTimeout(scan, 250)
+        if (!window.isSecureContext) {
+          throw new Error('Camera access requires HTTPS. Open the site on this computer using localhost, or use a secure HTTPS address.')
         }
-        scan()
-      } catch (error) { setCameraError(error.message || 'Could not open the camera.') }
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('This browser does not provide camera access. Try a current version of Chrome, Edge, Firefox, or Safari.')
+        }
+        const { BrowserQRCodeReader } = await import('@zxing/browser')
+        if (!active) return
+        const reader = new BrowserQRCodeReader()
+        const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+          if (!result || scanHandledRef.current) return
+          scanHandledRef.current = true
+          controlsRef.current?.stop()
+          onScanRef.current(result.getText())
+        })
+        if (active) controlsRef.current = controls
+        else controls.stop()
+      } catch (error) {
+        if (!active) return
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          setCameraError('Camera permission was blocked. Allow camera access for this site in your browser settings, then try again.')
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          setCameraError('No camera was found on this device.')
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          setCameraError('The camera is already being used by another app. Close that app and try again.')
+        } else {
+          setCameraError(error.message || 'Could not start the camera. Check the browser camera permission and try again.')
+        }
+      }
     }
     start()
     return () => {
       active = false
-      window.clearTimeout(timerRef.current)
-      streamRef.current?.getTracks().forEach((track) => track.stop())
+      controlsRef.current?.stop()
     }
-  }, [onScan])
+  }, [])
   return <div className="member-camera-panel"><video ref={videoRef} muted playsInline /><p><Camera size={16} /> Point the camera at the gym QR code.</p>{cameraError && <p className="attendance-inline-error" role="status">{cameraError}</p>}<button type="button" className="member-text-button" onClick={onClose}>Close camera</button></div>
 }
 
