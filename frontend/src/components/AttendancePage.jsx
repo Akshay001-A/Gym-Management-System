@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Clock3, QrCode, RefreshCw } from 'lucide-react'
-import { createAttendanceQrToken, getAdminAttendance } from '../api/attendance'
+import { Clock3, Mail, QrCode, RefreshCw, Search } from 'lucide-react'
+import { createAttendanceQrToken, getAdminAttendance, getAttendanceReminderSettings, updateAttendanceReminder } from '../api/attendance'
 
 const PAGE_SIZE = 100
 const today = () => new Date().toISOString().slice(0, 10)
@@ -36,6 +36,12 @@ export default function AttendancePage() {
   const [reload, setReload] = useState(0)
   const [attendanceLoadedAt, setAttendanceLoadedAt] = useState(Date.now())
   const [expandedMember, setExpandedMember] = useState(null)
+  const [reminderMembers, setReminderMembers] = useState([])
+  const [emailConfigured, setEmailConfigured] = useState(false)
+  const [reminderLoading, setReminderLoading] = useState(true)
+  const [reminderError, setReminderError] = useState('')
+  const [reminderSearch, setReminderSearch] = useState('')
+  const [savingReminderId, setSavingReminderId] = useState(null)
 
   const refreshQr = useCallback(async () => {
     if (qrRequestInFlight.current) return
@@ -91,7 +97,34 @@ export default function AttendancePage() {
     return () => controller.abort()
   }, [date, reload])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    getAttendanceReminderSettings({ signal: controller.signal })
+      .then((settings) => {
+        setReminderMembers(settings.members ?? [])
+        setEmailConfigured(Boolean(settings.emailConfigured))
+        setReminderError('')
+      })
+      .catch((requestError) => { if (requestError.name !== 'AbortError') setReminderError(requestError.message) })
+      .finally(() => { if (!controller.signal.aborted) setReminderLoading(false) })
+    return () => controller.abort()
+  }, [])
+
+  async function changeReminder(member, enabled) {
+    if (savingReminderId != null) return
+    setSavingReminderId(member.memberId)
+    setReminderError('')
+    try {
+      const updated = await updateAttendanceReminder(member.memberId, enabled)
+      setReminderMembers((current) => current.map((item) => item.memberId === updated.memberId ? updated : item))
+    } catch (requestError) { setReminderError(requestError.message) }
+    finally { setSavingReminderId(null) }
+  }
+
   const rows = result?.content ?? []
+  const filteredReminderMembers = reminderMembers.filter((member) =>
+    [member.name, member.email, member.memberId].some((value) => String(value ?? '').toLowerCase().includes(reminderSearch.trim().toLowerCase())),
+  )
   const memberTotals = useMemo(() => {
     const grouped = new Map()
     rows.forEach((visit) => {
@@ -123,6 +156,13 @@ export default function AttendancePage() {
           return <Fragment key={member.memberId ?? member.name}><tr><td><strong className="attendance-member-name">{member.name}</strong></td><td>{member.visitCount}</td><td><strong>{duration(member.totalSeconds)}</strong></td><td><div className="attendance-limit-cell"><div className="attendance-limit-track"><span className={status.tone} style={{ width: `${usage}%` }} /><i /></div><small>{duration(member.totalSeconds)} / 2h 30m</small></div></td><td><span className={`attendance-limit-status ${status.tone}`}>{status.label}</span></td><td><button className="attendance-detail-button" type="button" onClick={() => setExpandedMember(isExpanded ? null : member.memberId)}>{isExpanded ? 'Hide visits' : 'View visits'}</button></td></tr>
             {isExpanded && <tr className="attendance-expanded-row"><td colSpan="6"><div className="attendance-expanded-content"><h3>Visits for {member.name}</h3><div className="member-table-scroll"><table><thead><tr><th>Arrived</th><th>Left</th><th>Time inside</th><th>Status</th></tr></thead><tbody>{member.visits.map((visit) => <tr key={visit.visitId}><td>{visit.checkInAt ? new Date(visit.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td><td>{visit.checkOutAt ? new Date(visit.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td><td>{duration((visit.durationSeconds ?? 0) + (visit.currentlyInside ? Math.max(0, Math.floor((Date.now() - attendanceLoadedAt) / 1000)) : 0))}</td><td>{visit.currentlyInside ? 'Inside now' : 'Complete'}</td></tr>)}</tbody></table></div></div></td></tr>}</Fragment>
         })}</tbody></table></div> : <div className="attendance-empty">No visits recorded for this date.</div>}
+      </section>
+      <section className="surface attendance-reminder-panel"><div className="attendance-reminder-heading"><span><Mail size={18} /></span><div><h2>Daily attendance reminders</h2><p>Enabled members with no visit yesterday receive a friendly email at 9:00 PM India time.</p></div></div>
+        {!emailConfigured && <div className="attendance-mail-warning" role="status">Email sending is not configured yet. Add working SMTP settings to the existing microservices .env file before turning reminders on.</div>}
+        {reminderError && <div className="member-error" role="alert">{reminderError}</div>}
+        <div className="attendance-reminder-toolbar"><span>{reminderMembers.filter((member) => member.enabled).length} members enabled</span><label className="search-box"><Search size={16} /><input aria-label="Search reminder members" value={reminderSearch} onChange={(event) => setReminderSearch(event.target.value)} placeholder="Search members…" />{reminderSearch && <button type="button" aria-label="Clear search" onClick={() => setReminderSearch('')}>&times;</button>}</label></div>
+        {reminderLoading ? <div className="loading-state">Loading member reminder settings…</div> : filteredReminderMembers.length ? <div className="member-table-scroll"><table className="attendance-reminder-table"><thead><tr><th>Member</th><th>Email address</th><th>Last reminder</th><th>Email reminders</th></tr></thead><tbody>{filteredReminderMembers.map((member) => <tr key={member.memberId}><td><strong className="attendance-member-name">{member.name}</strong></td><td>{member.email || <span className="attendance-muted">No email address</span>}</td><td>{member.lastReminderSentFor ? new Date(`${member.lastReminderSentFor}T00:00:00`).toLocaleDateString() : 'Not sent'}</td><td><div className="attendance-toggle-wrap"><button type="button" role="switch" aria-checked={member.enabled} aria-label={`${member.enabled ? 'Turn off' : 'Turn on'} reminders for ${member.name}`} className={`attendance-switch ${member.enabled ? 'on' : ''}`} disabled={savingReminderId != null || (!member.enabled && (!emailConfigured || !member.email))} onClick={() => changeReminder(member, !member.enabled)}><span /></button><span>{savingReminderId === member.memberId ? 'Saving…' : member.enabled ? 'On' : 'Off'}</span></div></td></tr>)}</tbody></table></div> : <div className="attendance-empty">{reminderMembers.length ? 'No members match this search.' : 'No members are registered yet.'}</div>}
+        <p className="attendance-reminder-note">You can turn reminders off for a member who is ill, away, or taking a break. While enabled, a reminder may be sent each evening they were absent the previous day.</p>
       </section>
     </div>
   </div>

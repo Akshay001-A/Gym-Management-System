@@ -21,3 +21,13 @@ export function getMyAttendance({ from, to, signal } = {}) {
   const query = params.size ? `?${params}` : ''
   return apiRequest(`/members/me/attendance${query}`, { signal })
 }
+
+export function getAttendanceReminderSettings({ signal } = {}) {
+  return apiRequest('/members/attendance/reminders', { signal })
+}
+
+export function updateAttendanceReminder(memberId, enabled) {
+  return apiRequest(`/members/attendance/reminders/${encodeURIComponent(memberId)}`, {
+    method: 'PUT', body: { enabled },
+  })
+}

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import jakarta.validation.constraints.NotNull;
 
 public final class AttendanceDtos {
     private AttendanceDtos() {}
@@ -30,4 +31,11 @@ public final class AttendanceDtos {
 
     public record AdminVisit(Long visitId, Long memberId, String memberName,
             Instant checkInAt, Instant checkOutAt, long durationSeconds, boolean currentlyInside) {}
+
+    public record AttendanceReminderMember(Long memberId, String name, String email,
+            boolean enabled, LocalDate lastReminderSentFor) {}
+
+    public record AttendanceReminderSettings(boolean emailConfigured, List<AttendanceReminderMember> members) {}
+
+    public record AttendanceReminderToggle(@NotNull Boolean enabled) {}
 }
