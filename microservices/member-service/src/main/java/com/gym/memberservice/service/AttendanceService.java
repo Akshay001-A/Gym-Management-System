@@ -1,6 +1,8 @@
 package com.gym.memberservice.service;
 
 import com.gym.memberservice.dto.AttendanceDtos.AdminVisit;
+import com.gym.memberservice.dto.AttendanceDtos.AdminAttendanceCalendar;
+import com.gym.memberservice.dto.AttendanceDtos.AdminAttendanceCalendarMember;
 import com.gym.memberservice.dto.AttendanceDtos.DaySummary;
 import com.gym.memberservice.dto.AttendanceDtos.MemberHistory;
 import com.gym.memberservice.dto.AttendanceDtos.QrTokenResponse;
@@ -35,6 +37,8 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -192,6 +196,37 @@ public class AttendanceService {
                 visit.getCheckInAt(), visit.getCheckOutAt(),
                 secondsBetween(visit.getCheckInAt(), visit.getCheckOutAt() == null ? now : visit.getCheckOutAt()),
                 visit.getCheckOutAt() == null));
+    }
+
+    @Transactional(readOnly = true)
+    public AdminAttendanceCalendar getAdminCalendar(LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now(timeZone);
+        if (from == null || to == null || from.isAfter(to) || to.isAfter(today)
+                || ChronoUnit.DAYS.between(from, to) > 365) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Calendar range must be ordered, no later than today, and no longer than one year");
+        }
+
+        Instant rangeStart = from.atStartOfDay(timeZone).toInstant();
+        Instant rangeEnd = to.plusDays(1).atStartOfDay(timeZone).toInstant();
+        Instant now = Instant.now();
+        Map<Long, Set<LocalDate>> presentDates = new HashMap<>();
+        for (AttendanceVisit visit : visitRepository.findAllOverlappingVisitsForCalendar(rangeStart, rangeEnd)) {
+            Instant effectiveEnd = visit.getCheckOutAt() == null ? now : visit.getCheckOutAt();
+            Instant clippedStart = visit.getCheckInAt().isAfter(rangeStart) ? visit.getCheckInAt() : rangeStart;
+            Instant clippedEnd = effectiveEnd.isBefore(rangeEnd) ? effectiveEnd : rangeEnd;
+            LocalDate firstDay = clippedStart.atZone(timeZone).toLocalDate();
+            LocalDate lastDay = clippedEnd.minusNanos(1).atZone(timeZone).toLocalDate();
+            for (LocalDate date = firstDay; !date.isAfter(lastDay); date = date.plusDays(1)) {
+                presentDates.computeIfAbsent(visit.getMemberId(), ignored -> new TreeSet<>()).add(date);
+            }
+        }
+
+        List<AdminAttendanceCalendarMember> members = memberRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
+                .stream().map(member -> new AdminAttendanceCalendarMember(member.getId(), member.getName(),
+                        presentDates.getOrDefault(member.getId(), Set.of()).stream().sorted().toList()))
+                .toList();
+        return new AdminAttendanceCalendar(from, to, members);
     }
 
     private long dailyDurationSeconds(Long memberId, LocalDate date, Instant now) {

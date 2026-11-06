@@ -26,4 +26,9 @@ public interface AttendanceVisitRepository extends JpaRepository<AttendanceVisit
             + "and (visit.checkOutAt is null or visit.checkOutAt > :rangeStart)")
     Page<AttendanceVisit> findAllOverlappingVisits(@Param("rangeStart") Instant rangeStart,
             @Param("rangeEnd") Instant rangeEnd, Pageable pageable);
+
+    @Query("select visit from AttendanceVisit visit where visit.checkInAt < :rangeEnd "
+            + "and (visit.checkOutAt is null or visit.checkOutAt > :rangeStart)")
+    List<AttendanceVisit> findAllOverlappingVisitsForCalendar(@Param("rangeStart") Instant rangeStart,
+            @Param("rangeEnd") Instant rangeEnd);
 }

@@ -10,6 +10,11 @@ export function getAdminAttendance({ date, page = 0, size = 50, signal } = {}) {
   return apiRequest(`/members/attendance?${params}`, { signal })
 }
 
+export function getAdminAttendanceCalendar({ from, to, signal } = {}) {
+  const params = new URLSearchParams({ from, to })
+  return apiRequest(`/members/attendance/calendar?${params}`, { signal })
+}
+
 export function scanAttendanceQr(qrPayload) {
   return apiRequest('/members/me/attendance/scan', { method: 'POST', body: { qrPayload } })
 }

@@ -1,6 +1,7 @@
 package com.gym.memberservice.controller;
 
 import com.gym.memberservice.dto.AttendanceDtos.AdminVisit;
+import com.gym.memberservice.dto.AttendanceDtos.AdminAttendanceCalendar;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderMember;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderSettings;
 import com.gym.memberservice.dto.AttendanceDtos.AttendanceReminderToggle;
@@ -69,6 +70,14 @@ public class AttendanceController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         return attendanceService.getAdminAttendance(date, page, size);
+    }
+
+    @GetMapping("/attendance/calendar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AdminAttendanceCalendar getAttendanceCalendarForAdmin(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return attendanceService.getAdminCalendar(from, to);
     }
 
     @GetMapping("/attendance/reminders")

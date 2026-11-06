@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Camera, Clock3, RefreshCw, ScanLine } from 'lucide-react'
 import { getMyAttendance, scanAttendanceQr } from '../api/attendance'
+import { AttendanceCalendar, getAttendancePeriod } from './AttendanceCalendar'
+import '../styles/attendance-calendar.css'
 
 function duration(seconds = 0) {
   const safeSeconds = Math.max(0, Math.floor(seconds))
@@ -16,6 +18,33 @@ function gymDate(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(date)
+}
+
+function shiftDate(value, view, direction, maximum) {
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (view === 'week') date.setUTCDate(date.getUTCDate() + direction * 7)
+  else if (view === 'year') date.setUTCFullYear(date.getUTCFullYear() + direction)
+  else {
+    const target = new Date(Date.UTC(year, month - 1 + direction, 1))
+    target.setUTCDate(Math.min(day, new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()))
+    return target.toISOString().slice(0, 10) > maximum ? maximum : target.toISOString().slice(0, 10)
+  }
+  return date.toISOString().slice(0, 10) > maximum ? maximum : date.toISOString().slice(0, 10)
+}
+
+function splitDateRange(from, to) {
+  const segments = []
+  let start = from
+  while (start <= to) {
+    const startDate = new Date(`${start}T00:00:00Z`)
+    startDate.setUTCDate(startDate.getUTCDate() + 89)
+    const end = startDate.toISOString().slice(0, 10) < to ? startDate.toISOString().slice(0, 10) : to
+    segments.push({ from: start, to: end })
+    startDate.setUTCDate(startDate.getUTCDate() + 1)
+    start = startDate.toISOString().slice(0, 10)
+  }
+  return segments
 }
 
 function clockTime(value) {
@@ -96,6 +125,12 @@ export default function MemberAttendance() {
   const [cameraOpen, setCameraOpen] = useState(false)
   const [now, setNow] = useState(Date.now())
   const [dataLoadedAt, setDataLoadedAt] = useState(Date.now())
+  const [calendarView, setCalendarView] = useState('year')
+  const [calendarDate, setCalendarDate] = useState(gymDate())
+  const [calendarCounts, setCalendarCounts] = useState({})
+  const [calendarLoading, setCalendarLoading] = useState(true)
+  const [calendarError, setCalendarError] = useState('')
+  const calendarPeriod = getAttendancePeriod(calendarView, calendarDate, gymDate())
   const load = useCallback(async () => {
     setLoading(true); setError('')
     try {
@@ -108,6 +143,21 @@ export default function MemberAttendance() {
     finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const controller = new AbortController()
+    setCalendarLoading(true)
+    setCalendarError('')
+    const segments = splitDateRange(calendarPeriod.from, calendarPeriod.to)
+    Promise.all(segments.map((range) => getMyAttendance({ ...range, signal: controller.signal })))
+      .then((histories) => {
+        const counts = {}
+        histories.flatMap((history) => history.days ?? []).forEach((day) => { counts[day.date] = day.visitCount })
+        setCalendarCounts(counts)
+      })
+      .catch((requestError) => { if (requestError.name !== 'AbortError') setCalendarError(requestError.message) })
+      .finally(() => { if (!controller.signal.aborted) setCalendarLoading(false) })
+    return () => controller.abort()
+  }, [calendarPeriod.from, calendarPeriod.to])
   useEffect(() => {
     if (!data?.currentlyInside) return undefined
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
@@ -138,6 +188,8 @@ export default function MemberAttendance() {
     {data && <section className="attendance-daily-limit"><div className="attendance-limit-heading"><div><h3>Daily attendance guide</h3><p>Recommended target: 2 hours · Maximum guide: 2 hours 30 minutes</p></div><span className={`attendance-limit-status ${todayLimit.tone}`}>{todayLimit.label}</span></div><div className="attendance-limit-readout"><strong>{duration(todayTotalSeconds)}</strong><span>of 2h 30m</span></div><div className="attendance-limit-track attendance-limit-track-large" role="progressbar" aria-label="Today's gym time against the 2 hour 30 minute daily maximum" aria-valuemin="0" aria-valuemax="9000" aria-valuenow={Math.min(todayTotalSeconds, 9000)}><span className={todayLimit.tone} style={{ width: `${todayUsage}%` }} /><i /></div><div className="attendance-limit-scale"><span>0</span><span>2h target</span><span>2h 30m maximum</span></div></section>}
     <div className="attendance-member-actions"><button type="button" onClick={() => setCameraOpen((open) => !open)} disabled={busy}><Camera size={17} /> {cameraOpen ? 'Camera open' : 'Scan gym QR'}</button></div>
     {cameraOpen && <CameraScanner onScan={handleScan} onClose={() => setCameraOpen(false)} />}
+    {calendarError && <div className="member-error" role="alert">{calendarError}</div>}
+    <AttendanceCalendar view={calendarView} onViewChange={setCalendarView} anchorDate={calendarDate} onNavigate={(direction) => setCalendarDate((current) => shiftDate(current, calendarView, direction, gymDate()))} period={calendarPeriod} selectedDate={calendarDate} onDateSelect={setCalendarDate} countsByDate={calendarCounts} loading={calendarLoading} memberView />
     {message && <div className="attendance-success" role="status">{message}</div>}{error && <div className="member-error" role="alert">{error}</div>}
     <div className="attendance-history-heading"><h3>Recent visits</h3><span>Last 30 days</span></div>
     {loading ? <div className="member-loading">Loading your attendance…</div> : visits.length ? <div className="member-table-scroll"><table><thead><tr><th>Date</th><th>Arrived</th><th>Left</th><th>Time inside</th><th>Status</th></tr></thead><tbody>{visits.map((visit) => <tr key={visit.visitId}><td>{new Date(visit.checkInAt).toLocaleDateString()}</td><td>{clockTime(visit.checkInAt)}</td><td>{clockTime(visit.checkOutAt)}</td><td>{duration(visit.durationSeconds + (visit.currentlyInside ? liveDeltaSeconds : 0))}</td><td>{visit.currentlyInside ? 'Inside now' : 'Complete'}</td></tr>)}</tbody></table></div> : <p className="member-empty">No gym visits yet. Scan the QR at the entrance to start your first visit.</p>}
