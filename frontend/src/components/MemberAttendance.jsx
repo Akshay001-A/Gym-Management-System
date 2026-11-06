@@ -8,6 +8,13 @@ function duration(seconds = 0) {
   return hours ? `${hours}h ${minutes}m` : `${minutes}m`
 }
 
+function explainAttendanceError(error) {
+  if (error.status === 403) {
+    return 'The API Gateway is blocking member attendance access. Its security rules currently allow these member routes only for admins. The gateway needs to allow member access to their own attendance routes.'
+  }
+  return error.message
+}
+
 function CameraScanner({ onScan, onClose }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
@@ -53,10 +60,9 @@ export default function MemberAttendance() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
-  const [manualCode, setManualCode] = useState('')
   const load = useCallback(async () => {
     setLoading(true); setError('')
-    try { setData(await getMyAttendance()) } catch (requestError) { setError(requestError.message) }
+    try { setData(await getMyAttendance()) } catch (requestError) { setError(explainAttendanceError(requestError)) }
     finally { setLoading(false) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -67,15 +73,15 @@ export default function MemberAttendance() {
     try {
       const result = await scanAttendanceQr(payload.trim())
       setMessage(result.action === 'CHECK_IN' ? 'Checked in. Have a good workout!' : 'Checked out. Your visit time has been saved.')
-      setCameraOpen(false); setManualCode(''); await load()
-    } catch (requestError) { setError(requestError.message) }
+      setCameraOpen(false); await load()
+    } catch (requestError) { setError(explainAttendanceError(requestError)) }
     finally { setBusy(false) }
   }, [busy, load])
   const visits = data?.visits ?? []
   return <section className="member-panel member-attendance-panel">
     <div className="member-section-heading"><div><h2>Gym attendance</h2><p>Scan the entrance QR when you arrive and scan again when you leave.</p></div><button className="member-profile-edit-button" type="button" onClick={load}><RefreshCw size={15} /> Refresh</button></div>
     {data && <div className="attendance-member-summary"><article><span><Clock3 size={17} /></span><small>TODAY’S TOTAL</small><strong>{duration(data.totalDurationSeconds)}</strong></article><article><span><ScanLine size={17} /></span><small>VISIT STATUS</small><strong>{data.currentlyInside ? 'Checked in' : 'Checked out'}</strong></article>{data.currentCheckInAt && <article><span><Camera size={17} /></span><small>CHECKED IN AT</small><strong>{new Date(data.currentCheckInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></article>}</div>}
-    <div className="attendance-member-actions"><button type="button" onClick={() => setCameraOpen((open) => !open)} disabled={busy}><Camera size={17} /> {cameraOpen ? 'Camera open' : 'Scan gym QR'}</button><form onSubmit={(event) => { event.preventDefault(); handleScan(manualCode) }}><input value={manualCode} onChange={(event) => setManualCode(event.target.value)} placeholder="Or enter QR code text" aria-label="QR code text" /><button type="submit" disabled={busy || !manualCode.trim()}>{busy ? 'Saving…' : 'Submit code'}</button></form></div>
+    <div className="attendance-member-actions"><button type="button" onClick={() => setCameraOpen((open) => !open)} disabled={busy}><Camera size={17} /> {cameraOpen ? 'Camera open' : 'Scan gym QR'}</button></div>
     {cameraOpen && <CameraScanner onScan={handleScan} onClose={() => setCameraOpen(false)} />}
     {message && <div className="attendance-success" role="status">{message}</div>}{error && <div className="member-error" role="alert">{error}</div>}
     <div className="attendance-history-heading"><h3>Recent visits</h3><span>Last 30 days</span></div>

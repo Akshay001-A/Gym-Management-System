@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Clock3, QrCode, RefreshCw } from 'lucide-react'
 import { createAttendanceQrToken, getAdminAttendance } from '../api/attendance'
 
@@ -17,6 +17,8 @@ export default function AttendancePage() {
   const [secondsLeft, setSecondsLeft] = useState(0)
   const [qrError, setQrError] = useState('')
   const [refreshingQr, setRefreshingQr] = useState(false)
+  const qrRequestInFlight = useRef(false)
+  const autoRefreshStartedFor = useRef(null)
   const [date, setDate] = useState(today())
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -24,15 +26,19 @@ export default function AttendancePage() {
   const [reload, setReload] = useState(0)
 
   const refreshQr = useCallback(async () => {
-    if (refreshingQr) return
+    if (qrRequestInFlight.current) return
+    qrRequestInFlight.current = true
     setRefreshingQr(true)
     setQrError('')
     try {
       const value = await createAttendanceQrToken()
       setQr(value)
     } catch (requestError) { setQrError(requestError.message) }
-    finally { setRefreshingQr(false) }
-  }, [refreshingQr])
+    finally {
+      qrRequestInFlight.current = false
+      setRefreshingQr(false)
+    }
+  }, [])
 
   useEffect(() => { refreshQr() }, [refreshQr])
   useEffect(() => {
@@ -40,12 +46,15 @@ export default function AttendancePage() {
     const update = () => {
       const left = Math.max(0, Math.ceil((new Date(qr.expiresAt).getTime() - Date.now()) / 1000))
       setSecondsLeft(left)
-      if (left <= 15 && !refreshingQr) refreshQr()
+      if (left <= 15 && autoRefreshStartedFor.current !== qr.qrPayload) {
+        autoRefreshStartedFor.current = qr.qrPayload
+        refreshQr()
+      }
     }
     update()
     const timer = window.setInterval(update, 1000)
     return () => window.clearInterval(timer)
-  }, [qr, refreshQr, refreshingQr])
+  }, [qr, refreshQr])
 
   useEffect(() => {
     const controller = new AbortController()
