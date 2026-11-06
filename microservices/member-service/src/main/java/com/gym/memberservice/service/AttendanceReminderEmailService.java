@@ -53,20 +53,21 @@ public class AttendanceReminderEmailService {
     }
 
     private String reminderHtml(String memberName) {
-        return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>"
+        return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style type=\"text/css\">"
+                + "@media only screen and (max-width:600px){.mail-outer{width:100%!important;max-width:100%!important;box-sizing:border-box!important;padding:16px 8px!important}.mail-card{width:100%!important;max-width:100%!important;box-sizing:border-box!important;border-radius:12px!important}.mail-header{padding:14px 16px!important}.mail-logo{width:100%!important;max-width:270px!important;height:auto!important}.mail-content{padding:24px 20px!important}.mail-footer{padding:16px 20px!important}.mail-title{font-size:22px!important;line-height:1.3!important}.mail-highlight{padding:15px!important;margin:20px 0!important}.mail-highlight-title{font-size:21px!important}}</style></head>"
                 + "<body style=\"margin:0;padding:0;background:#f3f7f4;font-family:Arial,Helvetica,sans-serif;color:#173b2c;\">"
-                + "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#f3f7f4;padding:32px 12px;\"><tr><td align=\"center\">"
-                + "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#fff;border:1px solid #dce9df;border-radius:16px;overflow:hidden;\">"
-                + "<tr><td align=\"center\" style=\"padding:16px 24px;background:#f4f8f5;border-bottom:1px solid #dce9df;\"><img src=\"cid:formFitGymLogo\" width=\"360\" alt=\"FORM &amp; FIT Fitness Club\" style=\"display:block;width:100%;max-width:360px;height:auto;border:0;\"></td></tr>"
-                + "<tr><td style=\"padding:32px;\"><div style=\"font-size:12px;letter-spacing:1.5px;font-weight:700;color:#247951;\">A FRIENDLY CHECK-IN</div>"
-                + "<h1 style=\"margin:12px 0 10px;font-size:25px;line-height:1.25;color:#173b2c;\">We hope to see you tomorrow</h1>"
+                + "<table class=\"mail-outer\" role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#f3f7f4;padding:32px 12px;\"><tr><td align=\"center\">"
+                + "<table class=\"mail-card\" role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#fff;border:1px solid #dce9df;border-radius:16px;overflow:hidden;\">"
+                + "<tr><td class=\"mail-header\" align=\"center\" style=\"padding:16px 24px;background:#f4f8f5;border-bottom:1px solid #dce9df;\"><img class=\"mail-logo\" src=\"cid:formFitGymLogo\" width=\"360\" alt=\"FORM &amp; FIT Fitness Club\" style=\"display:block;width:100%;max-width:360px;height:auto;border:0;\"></td></tr>"
+                + "<tr><td class=\"mail-content\" style=\"padding:32px;\"><div style=\"font-size:12px;letter-spacing:1.5px;font-weight:700;color:#247951;\">A FRIENDLY CHECK-IN</div>"
+                + "<h1 class=\"mail-title\" style=\"margin:12px 0 10px;font-size:25px;line-height:1.25;color:#173b2c;\">We hope to see you tomorrow</h1>"
                 + "<p style=\"margin:0;font-size:15px;line-height:1.6;color:#607168;\">Hi " + escapeHtml(memberName)
                 + ", we didn’t see you at the gym today. If you couldn’t make it or needed a rest day, that’s okay. We’ll be glad to welcome you back whenever you’re ready.</p>"
-                + "<div style=\"margin:24px 0;padding:18px 20px;background:#eaf5ed;border:1px solid #d6e8da;border-radius:12px;\"><div style=\"font-size:11px;letter-spacing:1.4px;font-weight:700;color:#698174;\">YOUR NEXT VISIT</div>"
-                + "<div style=\"margin-top:6px;font-size:23px;font-weight:700;color:#176342;\">Come by tomorrow</div>"
+                + "<div class=\"mail-highlight\" style=\"margin:24px 0;padding:18px 20px;background:#eaf5ed;border:1px solid #d6e8da;border-radius:12px;\"><div style=\"font-size:11px;letter-spacing:1.4px;font-weight:700;color:#698174;\">YOUR NEXT VISIT</div>"
+                + "<div class=\"mail-highlight-title\" style=\"margin-top:6px;font-size:23px;font-weight:700;color:#176342;\">Come by tomorrow</div>"
                 + "<p style=\"margin:8px 0 0;font-size:14px;line-height:1.6;color:#607168;\">Get back to your routine at your own pace. We look forward to seeing you.</p></div>"
                 + "<p style=\"margin:22px 0 0;font-size:13px;line-height:1.6;color:#607168;\">Take care,<br><strong>The Form &amp; Fit Team</strong></p></td></tr>"
-                + "<tr><td style=\"padding:18px 32px;border-top:1px solid #edf1ee;font-size:12px;line-height:1.5;color:#839087;\">Form &amp; Fit Gym Management<br>A friendly attendance note from your club.</td></tr>"
+                + "<tr><td class=\"mail-footer\" style=\"padding:18px 32px;border-top:1px solid #edf1ee;font-size:12px;line-height:1.5;color:#839087;\">Form &amp; Fit Gym Management<br>A friendly attendance note from your club.</td></tr>"
                 + "</table></td></tr></table></body></html>";
     }
 

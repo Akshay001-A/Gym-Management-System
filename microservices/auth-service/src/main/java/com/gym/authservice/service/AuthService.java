@@ -155,19 +155,21 @@ public class AuthService {
 
     private String brandedOtpHtml(String heading, String description, String code,
             String noticeHeading, String notice) {
-        return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head>"
+        return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style type=\"text/css\">"
+                + "@media only screen and (max-width:600px){.mail-outer{width:100%!important;max-width:100%!important;box-sizing:border-box!important;padding:16px 8px!important}.mail-card{width:100%!important;max-width:100%!important;box-sizing:border-box!important;border-radius:12px!important}.mail-header{padding:14px 16px!important}.mail-logo{width:100%!important;max-width:270px!important;height:auto!important}.mail-content{padding:24px 20px!important}.mail-footer{padding:16px 20px!important}.mail-title{font-size:22px!important;line-height:1.3!important}.mail-code-card{padding:16px 10px!important;margin:22px 0!important}.mail-code{font-size:29px!important;letter-spacing:5px!important;word-break:break-all!important}.mail-notice{padding:12px!important}}"
+                + "@media only screen and (max-width:360px){.mail-content{padding:20px 16px!important}.mail-code{font-size:26px!important;letter-spacing:3px!important}}</style></head>"
                 + "<body style=\"margin:0;padding:0;background:#f3f7f4;font-family:Arial,Helvetica,sans-serif;color:#173b2c;\">"
-                + "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#f3f7f4;padding:32px 12px;\"><tr><td align=\"center\">"
-                + "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#ffffff;border:1px solid #dce9df;border-radius:16px;overflow:hidden;\">"
-                + "<tr><td align=\"center\" style=\"padding:16px 24px;background:#f4f8f5;border-bottom:1px solid #dce9df;\"><img src=\"cid:formFitGymLogo\" width=\"360\" alt=\"FORM &amp; FIT Fitness Club\" style=\"display:block;width:100%;max-width:360px;height:auto;border:0;\"></td></tr>"
-                + "<tr><td style=\"padding:32px;\"><div style=\"font-size:12px;letter-spacing:1.5px;font-weight:700;color:#247951;\">ACCOUNT SECURITY</div>"
-                + "<h1 style=\"margin:12px 0 10px;font-size:25px;line-height:1.25;color:#173b2c;\">" + escapeHtml(heading) + "</h1>"
+                + "<table class=\"mail-outer\" role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#f3f7f4;padding:32px 12px;\"><tr><td align=\"center\">"
+                + "<table class=\"mail-card\" role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#ffffff;border:1px solid #dce9df;border-radius:16px;overflow:hidden;\">"
+                + "<tr><td class=\"mail-header\" align=\"center\" style=\"padding:16px 24px;background:#f4f8f5;border-bottom:1px solid #dce9df;\"><img class=\"mail-logo\" src=\"cid:formFitGymLogo\" width=\"360\" alt=\"FORM &amp; FIT Fitness Club\" style=\"display:block;width:100%;max-width:360px;height:auto;border:0;\"></td></tr>"
+                + "<tr><td class=\"mail-content\" style=\"padding:32px;\"><div style=\"font-size:12px;letter-spacing:1.5px;font-weight:700;color:#247951;\">ACCOUNT SECURITY</div>"
+                + "<h1 class=\"mail-title\" style=\"margin:12px 0 10px;font-size:25px;line-height:1.25;color:#173b2c;\">" + escapeHtml(heading) + "</h1>"
                 + "<p style=\"margin:0;font-size:15px;line-height:1.6;color:#607168;\">" + escapeHtml(description) + "</p>"
-                + "<div style=\"margin:26px 0;padding:18px 12px;text-align:center;background:#f4f8f5;border:1px solid #dce9df;border-radius:12px;\"><div style=\"font-size:11px;letter-spacing:1.5px;font-weight:700;color:#718278;\">YOUR VERIFICATION CODE</div>"
-                + "<div style=\"margin-top:8px;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:8px;color:#176342;\">" + code + "</div></div>"
+                + "<div class=\"mail-code-card\" style=\"margin:26px 0;padding:18px 12px;text-align:center;background:#f4f8f5;border:1px solid #dce9df;border-radius:12px;\"><div style=\"font-size:11px;letter-spacing:1.5px;font-weight:700;color:#718278;\">YOUR VERIFICATION CODE</div>"
+                + "<div class=\"mail-code\" style=\"margin-top:8px;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:8px;color:#176342;\">" + code + "</div></div>"
                 + "<p style=\"margin:0;font-size:13px;line-height:1.6;color:#607168;\">This code expires in <strong>" + codeExpirationMinutes + " minutes</strong>. For your security, do not share it with anyone.</p>"
-                + "<div style=\"margin-top:22px;padding:14px 16px;background:#fbf8ef;border:1px solid #eee5c9;border-radius:10px;font-size:13px;line-height:1.6;color:#6d603c;\"><strong>" + escapeHtml(noticeHeading) + "</strong> " + escapeHtml(notice) + "</div>"
-                + "</td></tr><tr><td style=\"padding:18px 32px;border-top:1px solid #edf1ee;font-size:12px;line-height:1.5;color:#839087;\">Form &amp; Fit Gym Management<br>Automated security message — please do not reply.</td></tr>"
+                + "<div class=\"mail-notice\" style=\"margin-top:22px;padding:14px 16px;background:#fbf8ef;border:1px solid #eee5c9;border-radius:10px;font-size:13px;line-height:1.6;color:#6d603c;\"><strong>" + escapeHtml(noticeHeading) + "</strong> " + escapeHtml(notice) + "</div>"
+                + "</td></tr><tr><td class=\"mail-footer\" style=\"padding:18px 32px;border-top:1px solid #edf1ee;font-size:12px;line-height:1.5;color:#839087;\">Form &amp; Fit Gym Management<br>Automated security message — please do not reply.</td></tr>"
                 + "</table></td></tr></table></body></html>";
     }
 
